@@ -28,26 +28,29 @@ class Environment():
     #########################
     ## Connection: address (IP)
     @property
-    def address():
+    def address(self):
         return self._addr
     ## Connection: Port number
     @property
-    def port():
+    def port(self):
         return self._port
     ## Connection: ClientID
     @property
-    def client():
+    def client(self):
         return self._client
     ## Connection: SimulationTime/ConnectionTime
     @property
-    def connectionTime():
-        return self._connectionTime
+    def simulationTime(self):
+        vrep.simxGetPingTime(self._client)
+        #prev = self._connectionTime
+        #self._connectionTime = vrep.simxGetLastCmdTime(self._client)
+        return vrep.simxGetLastCmdTime(self._client)
 
     #init connection
     # returns client
     def init(self):
         print('Inititializing sim. connection...')
-        #vrep.simxFinish(-1) # just in case, close all opened connections
+        vrep.simxFinish(-1) # just in case, close all opened connections
         # simxStart(string connectionAddress,number connectionPort,boolean 
         # waitUntilConnected,boolean doNotReconnectOnceDisconnected,number timeOutInMs,
         # number commThreadCycleInMs)
@@ -80,8 +83,8 @@ class Environment():
                     assert retCode==0, retCode
                     blockHandleArray.append([handle,i_block,position])
                 self._connectionTime = vrep.simxGetLastCmdTime(client)
-                actuators = [leftMotorHandle, rightMotorHandle, pioneerRobotHandle]
-                sensors = [ultraSonicSensorLeft, ultraSonicSensorRight, None]
+                actuators = {'leftMotor': leftMotorHandle, 'rightMotor': rightMotorHandle, 'pioneerRobot': pioneerRobotHandle}
+                sensors = {'leftUltrasonic': ultraSonicSensorLeft, 'rightUltrasonic': ultraSonicSensorRight}
                 return {'actuators': actuators, 'sensors': sensors, 'client': client, 'vrep': vrep}
                 '''
                 return self.inner.DictMapping(clientID=client,
@@ -99,5 +102,9 @@ class Environment():
         else: # client => -1
             print(f'Error: Connection failed')
         return -1
+    def close(self):
+        print(f'Closing active connection...')
+        vrep.simxFinish(-1)
+        vrep.simxFinish(self._client)
 
 
