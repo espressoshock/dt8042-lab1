@@ -26,10 +26,23 @@ class Environment():
     #########################
     ### PROPS
     #########################
-    # return connectionTime
+    ## Connection: address (IP)
+    @property
+    def address():
+        return self._addr
+    ## Connection: Port number
+    @property
+    def port():
+        return self._port
+    ## Connection: ClientID
+    @property
+    def client():
+        return self._client
+    ## Connection: SimulationTime/ConnectionTime
     @property
     def connectionTime():
         return self._connectionTime
+
     #init connection
     # returns client
     def init(self):
