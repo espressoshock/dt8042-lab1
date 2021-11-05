@@ -4,6 +4,7 @@
 
 # =IMPORTS
 import math
+from ntpath import join
 from libs import vrepConst
 from libs import vrep
 import time
@@ -12,12 +13,30 @@ class Agent():
     #########################
     ### Constructor
     #########################
-    def __init__(self, client, vrep, actuators, sensors):
+    def __init__(self, name: str, actuators: dict, sensors: dict, client: str):
+        self._client = client
         self._actuators = actuators
         self._sensors = sensors
-        self._client = client
-        self._vrep = vrep
     
+    # Set motor speed given side
+    def _setMotorSpeed(self, side='left', velocity=0):
+        print(f'Turning {side} wheel by {velocity} velocity...')
+        #check if side motor has been registered
+        if side+'Motor' not in self._actuators:
+            return -1
+        #set velocity
+        vrep.simxSetJointTargetVelocity(
+            clientID=self._client,
+            jointHandle=self._actuators[side+'Motor'],
+            targetVelocity=velocity,
+            operationMode=vrepConst.simx_opmode_oneshot
+        )
+        
+
+    ########################################################################
+    ################# LEGACY #############################################
+    #######################################################################
+ 
     #########################
     ### PROPS
     #########################
@@ -33,18 +52,6 @@ class Agent():
         print("stopping...")
         self._stopMotors()
 
-
-    #set motor speed
-    def _setMotorSpeed(self, side='left', velocity=0):
-        #check if side motor has been registered
-        if side+'Motor' not in self._actuators:
-            return -1
-        try:
-            vrep.simxPauseCommunication(self._client,True)
-            vrep.simxSetJointTargetVelocity(self._client, self._actuators[side+'Motor'], velocity, vrepConst.simx_opmode_oneshot )
-        finally:
-            vrep.simxGetPingTime(self._client)
-            self._vrep.simxPauseCommunication(self._client,False)
     #stop all motors helper function
     def _stopMotors(self):
         self._setMotorSpeed('left', 0)
