@@ -16,7 +16,7 @@ class Simulation():
         self._agent = agent
         self._connectionTime = connectionTime
         self._client = client
-        self._def_op_mode = vrepConst.simx_opmode_oneshot_wait
+        self._opMode = vrepConst.simx_opmode_oneshot_wait #async
     
     #########################
     ### VREP-init
@@ -71,7 +71,7 @@ class Simulation():
                              'rightMotor': rightMotorHandle, 'pioneerRobot': pioneerRobotHandle}
                 sensors = {'leftUltrasonic': ultraSonicSensorLeft,
                            'rightUltrasonic': ultraSonicSensorRight}
-                return cls(Agent(None, actuators, sensors), connectionTime, client)
+                return cls(Agent(None, actuators, sensors, client), connectionTime, client)
             else:  # API error
                 print(f'Error: Remote API error [{res}]')
                 return -1
@@ -90,3 +90,10 @@ class Simulation():
     # auto-closing (with)
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.disconnect()
+    
+    #########################
+    ### PROPS
+    #########################
+    @property
+    def agent(self):
+        return self._agent
