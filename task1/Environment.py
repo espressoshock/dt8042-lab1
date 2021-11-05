@@ -14,12 +14,22 @@ class Environment():
         def __init__(self, *args, **kwargs):
             super(self.inner.DictMapping, self).__init__(*args, **kwargs)
             self.__dict__ = self
-
+    #########################
+    ### Constructor
+    #########################
     def __init__(self, addr='127.0.0.1', port=19999):
-        self.addr=addr
-        self.port = port
-        self.connectionTime = 0
-        self.client = None
+        self._addr=addr
+        self._port = port
+        self._connectionTime = 0
+        self._client = None
+
+    #########################
+    ### PROPS
+    #########################
+    # return connectionTime
+    @property
+    def connectionTime():
+        return self._connectionTime
     #init connection
     # returns client
     def init(self):
@@ -28,13 +38,13 @@ class Environment():
         # simxStart(string connectionAddress,number connectionPort,boolean 
         # waitUntilConnected,boolean doNotReconnectOnceDisconnected,number timeOutInMs,
         # number commThreadCycleInMs)
-        self.client =  vrep.simxStart(self.addr, self.port, True, True, 5000, 5) # connect to server
-        print(f'Client ID: {self.client}')
-        return self.client
+        self._client =  vrep.simxStart(self._addr, self._port, True, True, 5000, 5) # connect to server
+        print(f'Client ID: {self._client}')
+        return self._client
     # retrieve objects 
     def getObjects(self, client):
         if client != -1:
-            print(f'Connection to remote API established @ {self.addr}:{self.port}')
+            print(f'Connection to remote API established @ {self._addr}:{self._port}')
             # get objects
             res, objs = vrep.simxGetObjects(client,vrepConst.sim_handle_all,vrepConst.simx_opmode_oneshot_wait)
             #successful
@@ -56,7 +66,7 @@ class Environment():
                     retCode,position = vrep.simxGetObjectPosition(client, handle, -1, vrepConst.simx_opmode_oneshot_wait)
                     assert retCode==0, retCode
                     blockHandleArray.append([handle,i_block,position])
-                self.connectionTime = vrep.simxGetLastCmdTime(client)
+                self._connectionTime = vrep.simxGetLastCmdTime(client)
                 actuators = [leftMotorHandle, rightMotorHandle, pioneerRobotHandle]
                 sensors = [ultraSonicSensorLeft, ultraSonicSensorRight, None]
                 return {'actuators': actuators, 'sensors': sensors, 'client': client, 'vrep': vrep}
