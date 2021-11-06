@@ -48,16 +48,37 @@ class Simulation():
             #successful
             if res == vrepConst.simx_return_ok:
                 print(f'[Number of objects in scene {len(objs)}')
+                #########################
+                ### Motors
+                #########################
                 ret_lm,  leftMotorHandle = vrep.simxGetObjectHandle(
                     client, 'Pioneer_p3dx_leftMotor', vrepConst.simx_opmode_oneshot_wait)
                 ret_rm,  rightMotorHandle = vrep.simxGetObjectHandle(
                     client, 'Pioneer_p3dx_rightMotor', vrepConst.simx_opmode_oneshot_wait)
+                #########################
+                ### Robot (used as target finder [ref])
+                #########################
                 ret_pr,  pioneerRobotHandle = vrep.simxGetObjectHandle(
                     client, 'Pioneer_p3dx', vrepConst.simx_opmode_oneshot_wait)
-                ret_sl,  ultraSonicSensorLeft = vrep.simxGetObjectHandle(
-                    client, 'Pioneer_p3dx_ultrasonicSensor3', vrepConst.simx_opmode_oneshot_wait)
-                ret_sr,  ultraSonicSensorRight = vrep.simxGetObjectHandle(
-                    client, 'Pioneer_p3dx_ultrasonicSensor5', vrepConst.simx_opmode_oneshot_wait)
+                #########################
+                ### Sensors
+                #########################
+                ####### Left ############
+                ret_sl,  ultraSonicSensorLeftFront = vrep.simxGetObjectHandle(
+                    client, 'Pioneer_p3dx_ultrasonicSensor1', vrepConst.simx_opmode_oneshot_wait)
+                ret_sl,  ultraSonicSensorLeftBack = vrep.simxGetObjectHandle(
+                    client, 'Pioneer_p3dx_ultrasonicSensor16', vrepConst.simx_opmode_oneshot_wait)
+                ####### Front ############
+                ret_sl,  ultraSonicSensorFront = vrep.simxGetObjectHandle(
+                    client, 'Pioneer_p3dx_ultrasonicSensor4', vrepConst.simx_opmode_oneshot_wait)
+                ####### Right ############
+                ret_sl,  ultraSonicSensorRightFront = vrep.simxGetObjectHandle(
+                    client, 'Pioneer_p3dx_ultrasonicSensor8', vrepConst.simx_opmode_oneshot_wait)
+                ret_sl,  ultraSonicSensorRightBack = vrep.simxGetObjectHandle(
+                    client, 'Pioneer_p3dx_ultrasonicSensor9', vrepConst.simx_opmode_oneshot_wait)
+                ####### Back ############
+                ret_sl,  ultraSonicSensorBack = vrep.simxGetObjectHandle(
+                    client, 'Pioneer_p3dx_ultrasonicSensor13', vrepConst.simx_opmode_oneshot_wait)
                 blockHandleArray = []
                 for i_block in range(12):
                     blockName = 'ConcretBlock#'+str(i_block)
@@ -77,8 +98,11 @@ class Simulation():
                 connectionTime = vrep.simxGetLastCmdTime(client)
                 actuators = {'leftMotor': leftMotorHandle,
                              'rightMotor': rightMotorHandle}
-                sensors = {'leftUltrasonic': ultraSonicSensorLeft,
-                           'rightUltrasonic': ultraSonicSensorRight,
+                sensors = {'leftFrontUltrasonic': ultraSonicSensorLeftFront,
+                           'leftBackUltrasonic': ultraSonicSensorLeftBack,
+                           'frontUltrasonic': ultraSonicSensorFront,
+                           'rightFrontUltrasonic': ultraSonicSensorRightFront,
+                           'rightBackUltrasonic': ultraSonicSensorRightBack,
                            'targetSensor': pioneerRobotHandle}
                 return cls(Agent(None, actuators, sensors, pioneerRobotHandle, client), Environment(blockHandleArray), connectionTime, client)
             else:  # API error
