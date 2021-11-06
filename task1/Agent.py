@@ -14,7 +14,8 @@ class Agent():
     #########################
     ### Constructor
     #########################
-    def __init__(self, name: str, actuators: dict, sensors: dict, client: str):
+    def __init__(self, name: str, actuators: dict, sensors: dict, agentHandle: int, client: str):
+        self._agentHandle = agentHandle
         self._client = client
         self._actuators = actuators
         self._sensors = sensors
@@ -73,3 +74,8 @@ class Agent():
         while angle < -math.pi:
             angle += 2*math.pi
         return angle
+
+    ## Get agent orientation
+    def _getOrientation(self):
+        retCode, aOrientation = vrep.simxGetObjectOrientation(self._client, self._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
+        return self._normalizeAngle(math.pi / 2 - aOrientation[2])
