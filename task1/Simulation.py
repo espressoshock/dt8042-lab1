@@ -23,6 +23,7 @@ class Simulation():
     #########################
     @classmethod
     def init(cls, address='127.0.0.1', port=19999, doNotReconnect=True, timeOutInMs=5000, commThreadCycleinMs=5):
+        vrep.simxFinish(-1) # just in case, close all opened connections
         print('Inititializing sim. connection...')
         client = vrep.simxStart(
             connectionAddress=address,
@@ -81,6 +82,8 @@ class Simulation():
 
     # VREP disconnect
     def disconnect(self):
+        # make sure last cmd is sent out
+        vrep.simxGetPingTime(self._client)
         vrep.simxFinish(self._client)
 
     # (with) operator overload
