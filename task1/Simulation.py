@@ -16,14 +16,14 @@ class Simulation():
         self._agent = agent
         self._connectionTime = connectionTime
         self._client = client
-        self._opMode = vrepConst.simx_opmode_oneshot_wait #async
-    
+        self._opMode = vrepConst.simx_opmode_oneshot_wait  # async
+
     #########################
     ### VREP-init
     #########################
     @classmethod
     def init(cls, address='127.0.0.1', port=19999, doNotReconnect=True, timeOutInMs=5000, commThreadCycleinMs=5):
-        vrep.simxFinish(-1) # just in case, close all opened connections
+        vrep.simxFinish(-1)  # just in case, close all opened connections
         print('Inititializing sim. connection...')
         client = vrep.simxStart(
             connectionAddress=address,
@@ -93,10 +93,15 @@ class Simulation():
     # auto-closing (with)
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.disconnect()
-    
+
     #########################
     ### PROPS
     #########################
     @property
     def agent(self):
         return self._agent
+
+    @property
+    def simulationTime(self):
+        vrep.simxGetPingTime(self._client)
+        return vrep.simxGetLastCmdTime(self._client)
