@@ -4,16 +4,23 @@
 from libs import vrep
 from libs import vrepConst
 from Agent import Agent
+from Environment import Environment
 import math
 import random
 
 
 class Simulation():
     #########################
+    ### SIM-CONSTANTS
+    #########################
+    TARGET_COLLECTION_RANGE = 0.5
+
+    #########################
     ### Constructor
     #########################
-    def __init__(self, agent: Agent, connectionTime: str, client):
+    def __init__(self, agent: Agent, environment: Environment, connectionTime: str, client):
         self._agent = agent
+        self._env = environment
         self._connectionTime = connectionTime
         self._client = client
         self._opMode = vrepConst.simx_opmode_oneshot_wait  # async
@@ -69,16 +76,61 @@ class Simulation():
                     blockHandleArray.append([handle, i_block, position])
                 connectionTime = vrep.simxGetLastCmdTime(client)
                 actuators = {'leftMotor': leftMotorHandle,
-                             'rightMotor': rightMotorHandle, 'pioneerRobot': pioneerRobotHandle}
+                             'rightMotor': rightMotorHandle}
                 sensors = {'leftUltrasonic': ultraSonicSensorLeft,
-                           'rightUltrasonic': ultraSonicSensorRight}
-                return cls(Agent(None, actuators, sensors, client), connectionTime, client)
+                           'rightUltrasonic': ultraSonicSensorRight,
+                           'targetSensor': pioneerRobotHandle}
+                return cls(Agent(None, actuators, sensors, pioneerRobotHandle, client), Environment(blockHandleArray), connectionTime, client)
             else:  # API error
                 print(f'Error: Remote API error [{res}]')
                 return -1
         else:  # client => -1
             print(f'Error: Connection failed')
         return -1
+    #########################
+    ### Sim.Helpers
+    #########################
+    ## Find targets (energy blocks)
+
+    def _findTargets(self):
+        res = []
+        retCode, agentPosition = vrep.simxGetObjectPosition(
+            self._client, self._agent._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
+        for handle, name, position in self._env.blocks:
+            relativePos = [position[0] - agentPosition[0],
+                           position[1] - agentPosition[1]]
+            # compute Euclidean distance (in 2-D)
+            distance = math.sqrt(relativePos[0]**2 + relativePos[1]**2)
+            absDirection = math.atan2(relativePos[0], relativePos[1])
+            direction = Simulation.normalizeAngle(absDirection - self._agent.orientation)
+            res.append((handle, name, distance, direction))
+        res.sort(key=lambda xx: xx[2])
+        return res
+
+    ## collects targets in TARGET_COLLECTION_RANGE
+    def _collectTargets(self):
+        handle, name, distance, direction = self._findTargets()[0]
+        if distance <= self.TARGET_COLLECTION_RANGE:
+            # hide targets under floor
+            vrep.simxSetObjectPosition(
+                self._client, handle, -1, [1000, 1000, -2], vrepConst.simx_opmode_oneshot)
+            #update env blocks
+            self._env.blocks[name][-1] = [1000, 1000, -2]
+            return (f'Target collected successfully!')
+        return (f'No targets within {self.TARGET_COLLECTION_RANGE} unit(s)')
+
+    #########################
+    ### Class methods
+    #########################
+    ## Angle normalization
+
+    @classmethod
+    def normalizeAngle(cls, angle: float):
+        while angle > math.pi:
+            angle -= 2*math.pi
+        while angle < -math.pi:
+            angle += 2*math.pi
+        return angle
 
     # VREP disconnect
     def disconnect(self):
@@ -100,6 +152,10 @@ class Simulation():
     @property
     def agent(self):
         return self._agent
+
+    @property
+    def environment(self):
+        return self._env
 
     @property
     def simulationTime(self):
