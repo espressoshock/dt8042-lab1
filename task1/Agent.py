@@ -65,3 +65,11 @@ class Agent():
         if sensor not in self._sensors.values():
             return -1
         return _getObstacleDist(sensor)
+
+    ## Angle normalization
+    def _normalizeAngle(self, angle: float):
+        while angle > math.pi:
+            angle -= 2*math.pi
+        while angle < -math.pi:
+            angle += 2*math.pi
+        return angle
