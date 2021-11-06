@@ -21,6 +21,12 @@ class Agent():
         self._sensors = sensors
 
     #########################
+    ### Methods to override
+    #########################
+    def act(self):
+        pass
+
+    #########################
     ### Privates
     #########################
     ## set motorSpeed (cmd sent together) of both wheels

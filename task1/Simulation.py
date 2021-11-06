@@ -1,6 +1,10 @@
 ###########################
 ### Simulation Class
 ##########################
+from FixedAgent import FixedAgent
+from MemoryAgent import MemoryAgent
+from RandomAgent import RandomAgent
+from ReflexAgent import ReflexAgent
 from libs import vrep
 from libs import vrepConst
 from Agent import Agent
@@ -111,6 +115,23 @@ class Simulation():
         else:  # client => -1
             print(f'Error: Connection failed')
         return -1
+
+    #########################
+    ### Sim.Starters
+    #########################
+    ## Starter entry point
+    def start(self, type: str = 'random'):
+        # casting to specialization
+        if type == 'random':
+           self._agent.__class__ = RandomAgent
+        elif type == 'fixed':
+            self._agent.__class__ = FixedAgent
+        elif type == 'reflex':
+            self._agent.__class__ = ReflexAgent
+        else:  # agent with memory => 'memory'
+            self._agent.__class__ = MemoryAgent
+        # init agent strategy
+        self._agent.act()
 
     #########################
     ### Sim.Helpers
