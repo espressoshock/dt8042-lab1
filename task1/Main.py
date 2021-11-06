@@ -15,9 +15,11 @@ def main():
     with Simulation.init() as sim:
         agent = sim.agent
         start = time.time()
-        while time.time() < start + 2:
-            agent._setMotorSpeed('left', 1)
-        agent._setMotorSpeed('left', 0)
+        while time.time() < start + 10:
+            print(sim._collectTargets())
+            agent._setMotorSpeed(1, 1)
+        agent._setMotorSpeed(0, 0)
+        #time.sleep(2)
 
 if __name__ == '__main__':
     main()
