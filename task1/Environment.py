@@ -14,16 +14,16 @@ class Environment():
     #########################
     ### Constructor
     #########################
-    def __init__(self, blocks: list):
-        self._blocks = blocks
+    def __init__(self, targets: list):
+        self._targets = targets
 
     #########################
     ### PROPS
     #########################
     @property
-    def blocks(self):
-        return self._blocks
+    def targets(self):
+        return self._targets
 
-    @blocks.setter
-    def blocks(self, value):
-        self._blocks = value
+    @targets.setter
+    def targets(self, value):
+        self._targets = value

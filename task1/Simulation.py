@@ -96,7 +96,7 @@ class Simulation():
         res = []
         retCode, agentPosition = vrep.simxGetObjectPosition(
             self._client, self._agent._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
-        for handle, name, position in self._env.blocks:
+        for handle, name, position in self._env.targets:
             relativePos = [position[0] - agentPosition[0],
                            position[1] - agentPosition[1]]
             # compute Euclidean distance (in 2-D)
@@ -113,10 +113,12 @@ class Simulation():
         handle, name, distance, direction = self._findTargets()[0]
         if distance <= self.TARGET_COLLECTION_RANGE:
             # hide targets under floor
+            vrep.simxPauseCommunication(self._client, 1)
             vrep.simxSetObjectPosition(
                 self._client, handle, -1, [1000, 1000, -2], vrepConst.simx_opmode_oneshot)
-            #update env blocks
-            self._env.blocks[name][-1] = [1000, 1000, -2]
+            vrep.simxPauseCommunication(self._client, 0)
+            #update env targets
+            self._env.targets[name][-1] = [1000, 1000, -2]
             return (f'Target collected successfully!')
         return (f'No targets within {self.TARGET_COLLECTION_RANGE} unit(s)')
 
