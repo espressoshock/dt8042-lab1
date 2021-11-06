@@ -42,8 +42,8 @@ class Agent():
             )
         finally:
             vrep.simxPauseCommunication(self._client, 0)  # resume
-    ## Get sensors data
 
+    ## Get sensors data
     def _getSensorData(self, sensor: int):
         # get obstacle distance given sensor (handler)
         def _getObstacleDist(sensorHandler_):  # from original implementation

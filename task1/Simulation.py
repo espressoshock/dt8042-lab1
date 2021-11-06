@@ -87,11 +87,11 @@ class Simulation():
         else:  # client => -1
             print(f'Error: Connection failed')
         return -1
+
     #########################
     ### Sim.Helpers
     #########################
     ## Find targets (energy blocks)
-
     def _findTargets(self):
         res = []
         retCode, agentPosition = vrep.simxGetObjectPosition(
@@ -102,7 +102,8 @@ class Simulation():
             # compute Euclidean distance (in 2-D)
             distance = math.sqrt(relativePos[0]**2 + relativePos[1]**2)
             absDirection = math.atan2(relativePos[0], relativePos[1])
-            direction = Simulation.normalizeAngle(absDirection - self._agent.orientation)
+            direction = Simulation.normalizeAngle(
+                absDirection - self._agent.orientation)
             res.append((handle, name, distance, direction))
         res.sort(key=lambda xx: xx[2])
         return res
@@ -123,7 +124,6 @@ class Simulation():
     ### Class methods
     #########################
     ## Angle normalization
-
     @classmethod
     def normalizeAngle(cls, angle: float):
         while angle > math.pi:

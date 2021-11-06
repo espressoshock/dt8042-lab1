@@ -5,7 +5,10 @@
 # =IMPORTS
 from libs import vrep
 from libs import vrepConst
-import math, time, random
+import math
+import time
+import random
+
 
 class Environment():
     #########################
