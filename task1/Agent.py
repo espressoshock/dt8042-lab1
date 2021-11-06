@@ -67,15 +67,25 @@ class Agent():
             return -1
         return _getObstacleDist(sensor)
 
-    ## Angle normalization
-    def _normalizeAngle(self, angle: float):
+    ## Get agent orientation
+    def _getOrientation(self):
+        retCode, agentPosition = vrep.simxGetObjectOrientation(
+            self._client, self._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
+        return self.normalizeAngle(math.pi / 2 - agentPosition[2])
+
+    #################################
+    ####### DEL ME #################
+    #################################
+    def normalizeAngle(self, angle: float):
         while angle > math.pi:
             angle -= 2*math.pi
         while angle < -math.pi:
             angle += 2*math.pi
         return angle
 
-    ## Get agent orientation
-    def _getOrientation(self):
-        retCode, aOrientation = vrep.simxGetObjectOrientation(self._client, self._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
-        return self._normalizeAngle(math.pi / 2 - aOrientation[2])
+    #########################
+    ### PROPS
+    #########################
+    @property
+    def orientation(self):
+        return self._getOrientation()
