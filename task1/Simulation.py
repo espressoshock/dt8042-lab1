@@ -134,7 +134,7 @@ class Simulation():
 
         ## start auto-collect daemon for target fetching
         dThread = Thread(
-            target=self._collectTargetsDaemon, args=(True,), daemon=True) # make sure daemon->destroyed after _exit_
+            target=self._collectTargetsDaemon, args=(False,), daemon=True) # make sure daemon->destroyed after _exit_
         dThread.start()
 
         # init agent strategy

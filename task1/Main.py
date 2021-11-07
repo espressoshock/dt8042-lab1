@@ -13,7 +13,7 @@ from Simulation import Simulation
 
 def main():
     with Simulation.init() as sim:
-        sim.start()
+        sim.start('random')
 
 if __name__ == '__main__':
     main()

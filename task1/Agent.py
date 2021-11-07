@@ -81,6 +81,11 @@ class Agent():
         self.driveBreak()
         #print('final angle: ', self._getOrientation())
 
+    ## Spin Unsupervised
+    def driveSpinunsupervised(self, baseVelocity: float = 2):
+        self._setMotorSpeed(baseVelocity, -baseVelocity)
+
+
     #########################
     ### Privates
     #########################
