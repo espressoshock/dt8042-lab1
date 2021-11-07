@@ -11,6 +11,7 @@ from Agent import Agent
 from Environment import Environment
 import math
 import random
+from threading import Thread
 
 
 class Simulation():
@@ -131,8 +132,13 @@ class Simulation():
         else:  # agent with memory => 'memory'
             self._agent.__class__ = MemoryAgent
 
-        print(f'Simulation of a {type.capitalize()} Agent in progress...')
+        ## start auto-collect daemon for target fetching
+        dThread = Thread(
+            target=self._collectTargetsDaemon, args=(True,), daemon=True) # make sure daemon->destroyed after _exit_
+        dThread.start()
+
         # init agent strategy
+        print(f'Simulation of a {type.capitalize()} Agent in progress...')
         self._agent.act()
         print(f'Simulation of a {type.capitalize()} Agent Terminated.')
 
@@ -169,6 +175,14 @@ class Simulation():
             self._env.targets[name][-1] = [1000, 1000, -2]
             return (f'Target collected successfully!')
         return (f'No targets within {self.TARGET_COLLECTION_RANGE} unit(s)')
+    
+    ## __collectTargets -> Daemon
+    def _collectTargetsDaemon(self, log: bool = False):
+        while True:
+            if log:
+                print(self._collectTargets())
+            else: 
+                self._collectTargets()
 
     #########################
     ### Class methods
