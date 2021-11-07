@@ -21,6 +21,45 @@ class Agent():
         self._sensors = sensors
 
     #########################
+    ### Methods to override
+    #########################
+    def act(self):
+        pass
+
+    #########################
+    ### Steering Methods
+    #########################
+    ## forwards
+    def driveForward(self, baseVelocity: float = 2):
+        self._setMotorSpeed(baseVelocity, baseVelocity)
+
+    ## backwards
+    def driveBackward(self, baseVelocity: float = 2):
+        self._setMotorSpeed(-baseVelocity, -baseVelocity)
+
+    ## Left
+    def driveLeft(self, baseVelocity: float = 2, turningRadius: float = 1.5):
+        self._setMotorSpeed(baseVelocity, baseVelocity + turningRadius)
+
+    ## Right
+    def driveRight(self, baseVelocity: float = 2, turningRadius: float = 1.5):
+        self._setMotorSpeed(baseVelocity + turningRadius, baseVelocity)
+    
+    ## Stop the motion
+    def driveBreak(self):
+        self._setMotorSpeed(0,0)
+
+    ## Spin -> clockwise direction
+    def driveSpin(self, baseVelocity: float = 1, turningAngle: float = 90):
+        sAngle = self._getOrientation()
+        self._setMotorSpeed(-baseVelocity, baseVelocity)
+        correction = baseVelocity * 16 # need differential correction
+        while self._getOrientation() < (sAngle + turningAngle) - correction:
+            pass
+        self._setMotorSpeed(0, 0)
+
+
+    #########################
     ### Privates
     #########################
     ## set motorSpeed (cmd sent together) of both wheels
@@ -71,7 +110,8 @@ class Agent():
     def _getOrientation(self):
         retCode, agentPosition = vrep.simxGetObjectOrientation(
             self._client, self._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
-        return self.normalizeAngle(math.pi / 2 - agentPosition[2])
+        return agentPosition[2] * 180 / math.pi
+        #return self.normalizeAngle(math.pi / 2 - agentPosition[2]) # deprecated
 
     #################################
     ####### DEL ME #################
