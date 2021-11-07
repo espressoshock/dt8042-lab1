@@ -27,6 +27,25 @@ class Agent():
         pass
 
     #########################
+    ### Steering Methods
+    #########################
+    ## forwards
+    def driveForward(self, baseVelocity: float = 1):
+        self._setMotorSpeed(baseVelocity, baseVelocity)
+
+    ## backwards
+    def driveBackward(self, baseVelocity: float = 1):
+        self._setMotorSpeed(-baseVelocity, -baseVelocity)
+
+    ## Left
+    def driveLeft(self, baseVelocity: float = 1, turningRadius: float = 1.5):
+        self._setMotorSpeed(baseVelocity, baseVelocity + turningRadius)
+
+    ## Right
+    def driveRight(self, baseVelocity: float = 1, turningRadius: float = 1.5):
+        self._setMotorSpeed(baseVelocity + turningRadius, baseVelocity)
+
+    #########################
     ### Privates
     #########################
     ## set motorSpeed (cmd sent together) of both wheels
