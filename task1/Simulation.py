@@ -130,8 +130,11 @@ class Simulation():
             self._agent.__class__ = ReflexAgent
         else:  # agent with memory => 'memory'
             self._agent.__class__ = MemoryAgent
+
+        print(f'Simulation of a {type.capitalize()} Agent in progress...')
         # init agent strategy
         self._agent.act()
+        print(f'Simulation of a {type.capitalize()} Agent Terminated.')
 
     #########################
     ### Sim.Helpers
