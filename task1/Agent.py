@@ -48,16 +48,38 @@ class Agent():
     ## Stop the motion
     def driveBreak(self):
         self._setMotorSpeed(0,0)
+    
+    ## drive in _direction_ for _time_
+    def drive(self, direction: str = 'forward', velocity: float = 2, duration: float = 2.0):
+        if direction not in ['forward', 'backward', 'left', 'right', 'spin']:
+            direction = 'forward'
+        start = time.time()
+        getattr(self, 'drive'+direction.capitalize())(velocity)
+        while time.time() < start + duration:
+            pass
+        self.driveBreak()
 
     ## Spin -> clockwise direction
     def driveSpin(self, baseVelocity: float = 1, turningAngle: float = 90):
         sAngle = self._getOrientation()
-        self._setMotorSpeed(-baseVelocity, baseVelocity)
-        correction = baseVelocity * 16 # need differential correction
-        while self._getOrientation() < (sAngle + turningAngle) - correction:
-            pass
-        self._setMotorSpeed(0, 0)
-
+        if turningAngle < 0:
+            self._setMotorSpeed(-baseVelocity, baseVelocity)
+            correction = baseVelocity * 18 # need differential correction
+            print('sAngle: ', self._getOrientation())
+            print('target: ', sAngle + (-turningAngle))
+            while self._getOrientation() <  (sAngle + (-turningAngle)) - correction:
+                print('angle: ', self._getOrientation())
+                pass
+        else:
+            self._setMotorSpeed(baseVelocity, -baseVelocity)
+            correction = baseVelocity * 18 # need differential correction
+            #print('sAngle: ', self._getOrientation())
+            #print('target: ', sAngle + (-turningAngle))
+            while self._getOrientation() >  (sAngle - turningAngle) + correction:
+                print('angle: ', self._getOrientation())
+                pass
+        self.driveBreak()
+        #print('final angle: ', self._getOrientation())
 
     #########################
     ### Privates
