@@ -3,8 +3,7 @@
 ##########################
 
 from Agent import Agent
-import time
-import random
+import random, time
 
 
 class RandomAgent(Agent):
@@ -19,19 +18,21 @@ class RandomAgent(Agent):
     #########################
     def act(self):
         ######## PARAMS #######
-        simDuration = 3*5 # sim.duration
-        strCSwitchPeriod = 3  # time period per strategy before switching
+        simDuration = 10 # sim.duration
+        strCSwitchPeriod = 10  # time period per strategy before switching
         ######## PARAMS #######
-        simStart = time.time()
-        while time.time() < simStart + simDuration:
-            self._execRandomAction()
-            time.sleep(strCSwitchPeriod)
-        super()._setMotorSpeed(0, 0)
+        for i in range(simDuration):
+            action = self._randomAction()
+            cSimTime = 0
+            while cSimTime < strCSwitchPeriod:
+                action()
+                cSimTime += self._simDt
+        super().driveBreak()
 
     ## Get random action
     def _getRandomAction(self):
         allowedActions = ['forward', 'backward',
-                          'left', 'right', 'spin', 'break']
+                          'left', 'right', 'spinUnsupervised', 'break']
         return (random.choice(allowedActions)).capitalize()
 
     ## execute random drive action
@@ -39,3 +40,9 @@ class RandomAgent(Agent):
         rAction = self._getRandomAction()
         print(f'- Executing random action => [{rAction}]')
         getattr(super(), 'drive'+rAction)()
+    
+    ## get random drive action method
+    def _randomAction(self):
+        rAction = self._getRandomAction()
+        print(f'- Executing random action => [{rAction}]')
+        return getattr(super(), 'drive'+rAction)
