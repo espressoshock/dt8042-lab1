@@ -54,7 +54,7 @@ class Simulation():
                 syncRes = vrep.simxSynchronous(clientID=client, enable=True)
                 vrep.simxStartSimulation(
                     clientID=client, operationMode=vrepConst.simx_opmode_blocking)
-                if syncRes != vrepConst.simx_return_ok: # server error, sync.mode not enabled
+                if syncRes != vrepConst.simx_return_ok:  # server error, sync.mode not enabled
                     print(f'Server error, synchronized mode not enabled, quitting...')
                     quit()
                 else:
@@ -242,3 +242,10 @@ class Simulation():
     def simulationTime(self):
         vrep.simxGetPingTime(self._client)
         return vrep.simxGetLastCmdTime(self._client)
+
+    @property
+    def simulationStep(self):
+        res, dt =  vrep.simxGetFloatingParameter(
+                self._client, vrepConst.sim_floatparam_simulation_time_step,
+                vrepConst.simx_opmode_blocking)
+        return dt if res == vrepConst.simx_return_ok else res
