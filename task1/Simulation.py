@@ -23,18 +23,18 @@ class Simulation():
     #########################
     ### Constructor
     #########################
-    def __init__(self, agent: Agent, environment: Environment, connectionTime: str, client):
+    def __init__(self, agent: Agent, environment: Environment, connectionTime: str, client, synchronous: bool = True):
         self._agent = agent
         self._env = environment
         self._connectionTime = connectionTime
         self._client = client
-        self._opMode = vrepConst.simx_opmode_oneshot_wait  # async
+        self._synchronous = synchronous
 
     #########################
     ### VREP-init
     #########################
     @classmethod
-    def init(cls, address='127.0.0.1', port=19999, doNotReconnect=True, timeOutInMs=5000, commThreadCycleinMs=5):
+    def init(cls, address='127.0.0.1', port=19999, doNotReconnect=True, timeOutInMs=5000, commThreadCycleinMs=5, synchronous: bool = True):
         vrep.simxFinish(-1)  # just in case, close all opened connections
         print('Inititializing sim. connection...')
         client = vrep.simxStart(
@@ -47,6 +47,18 @@ class Simulation():
         if client == vrepConst.simx_return_ok:
             print(f'Connection to remote API established @ {address}:{port}')
             print(f'Client ID: {client}')
+            print(
+                f'Connection type: {"Synchronous" if synchronous else "Asynchronous"}')
+            #enable synch.conn.mode
+            if synchronous:
+                syncRes = vrep.simxSynchronous(clientID=client, enable=True)
+                vrep.simxStartSimulation(
+                    clientID=client, operationMode=vrepConst.simx_opmode_blocking)
+                if syncRes != vrepConst.simx_return_ok: # server error, sync.mode not enabled
+                    print(f'Server error, synchronized mode not enabled, quitting...')
+                    quit()
+                else:
+                    print(f'[Synchronized mode enabled and accepted]')
             # get objects
             res, objs = vrep.simxGetObjects(
                 client, vrepConst.sim_handle_all, vrepConst.simx_opmode_oneshot_wait)
@@ -109,12 +121,14 @@ class Simulation():
                            'rightFrontUltrasonic': ultraSonicSensorRightFront,
                            'rightBackUltrasonic': ultraSonicSensorRightBack,
                            'targetSensor': pioneerRobotHandle}
-                return cls(Agent(None, actuators, sensors, pioneerRobotHandle, client), Environment(blockHandleArray), connectionTime, client)
+                return cls(Agent(None, actuators, sensors, pioneerRobotHandle, client, synchronous), Environment(blockHandleArray), connectionTime, client)
             else:  # API error
                 print(f'Error: Remote API error [{res}]')
+                quit()
                 return -1
         else:  # client => -1
             print(f'Error: Connection failed')
+            quit()
         return -1
 
     #########################
@@ -134,7 +148,7 @@ class Simulation():
 
         ## start auto-collect daemon for target fetching
         dThread = Thread(
-            target=self._collectTargetsDaemon, args=(False,), daemon=True) # make sure daemon->destroyed after _exit_
+            target=self._collectTargetsDaemon, args=(False,), daemon=True)  # make sure daemon->destroyed after _exit_
         dThread.start()
 
         # init agent strategy
@@ -175,13 +189,13 @@ class Simulation():
             self._env.targets[name][-1] = [1000, 1000, -2]
             return (f'Target collected successfully!')
         return (f'No targets within {self.TARGET_COLLECTION_RANGE} unit(s)')
-    
+
     ## __collectTargets -> Daemon
     def _collectTargetsDaemon(self, log: bool = False):
         while True:
             if log:
                 print(self._collectTargets())
-            else: 
+            else:
                 self._collectTargets()
 
     #########################
@@ -200,6 +214,9 @@ class Simulation():
     def disconnect(self):
         # make sure last cmd is sent out
         vrep.simxGetPingTime(self._client)
+        #stop simulation
+        vrep.simxStopSimulation(self._client, vrepConst.simx_opmode_blocking)
+        #close connection
         vrep.simxFinish(self._client)
 
     # (with) operator overload
