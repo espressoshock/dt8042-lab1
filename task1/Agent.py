@@ -14,12 +14,13 @@ class Agent():
     #########################
     ### Constructor
     #########################
-    def __init__(self, name: str, actuators: dict, sensors: dict, agentHandle: int, client: str, execModeSync: bool = True):
+    def __init__(self, name: str, actuators: dict, sensors: dict, agentHandle: int, client: str, simulationDt: float, execModeSync: bool = True):
         self._agentHandle = agentHandle
         self._client = client
         self._actuators = actuators
         self._sensors = sensors
         self._execModeSync = execModeSync
+        self._simDt = simulationDt
 
     #########################
     ### Methods to override
@@ -38,6 +39,10 @@ class Agent():
     def driveBackward(self, baseVelocity: float = 2):
         self._setMotorSpeed(-baseVelocity, -baseVelocity)
 
+    # ===========================
+    # == Turn (Arc trajectory) ==
+    # ===========================
+
     ## Left
     def driveLeft(self, baseVelocity: float = 2, turningRadius: float = 1.5):
         self._setMotorSpeed(baseVelocity, baseVelocity + turningRadius)
@@ -46,7 +51,13 @@ class Agent():
     def driveRight(self, baseVelocity: float = 2, turningRadius: float = 1.5):
         self._setMotorSpeed(baseVelocity + turningRadius, baseVelocity)
 
+    # ============================================
+    # == Rotate (in-place / differential drive) ==
+    # ============================================
+
+
     ## Stop the motion
+
     def driveBreak(self):
         self._setMotorSpeed(0, 0)
 
@@ -59,19 +70,6 @@ class Agent():
         while time.time() < start + duration:
             pass
         self.driveBreak()
-
-    ## Spin -> clockwise direction
-    def driveSpin(self, baseVelocity: float = 1, turningAngle: float = 90):
-        sAngle = self._getOrientation()
-        print('sAngle: ', self._getOrientation())
-        print('target: ', sAngle + turningAngle)
-        while self._getOrientation() < 90:
-            print('angle: ', self._getOrientation())
-            self._setMotorSpeed(0, 0)
-            #input('type')
-            self._setMotorSpeed(-300, 300)
-            vrep.simxSynchronousTrigger(self._client)
-        print('final angle: ', self._getOrientation())
 
     ## Spin Unsupervised
     def driveSpinunsupervised(self, baseVelocity: float = 2):
@@ -101,7 +99,7 @@ class Agent():
             )
         finally:
             if self._execModeSync:
-                print('Next render triggered')
+                #print('Next render triggered')
                 vrep.simxSynchronousTrigger(self._client)
                 # make sure sim.step is over
                 vrep.simxGetPingTime(self._client)

@@ -4,16 +4,13 @@
 
 ## =IMPORTS
 from Environment import Environment
-from Agent import Agent
-
-import time
-
 from Simulation import Simulation
 
 
 def main():
-    with Simulation.init() as sim:
-        sim.start('random')
+    with Simulation.init(port=19997, synchronous=True) as sim:
+        sim.start('fixed')
+
 
 if __name__ == '__main__':
     main()

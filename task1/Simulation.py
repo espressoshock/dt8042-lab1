@@ -113,6 +113,9 @@ class Simulation():
                     assert retCode == 0, retCode
                     blockHandleArray.append([handle, i_block, position])
                 connectionTime = vrep.simxGetLastCmdTime(client)
+                res, simulationDt = vrep.simxGetFloatingParameter(
+                    client, vrepConst.sim_floatparam_simulation_time_step,
+                    vrepConst.simx_opmode_blocking)
                 actuators = {'leftMotor': leftMotorHandle,
                              'rightMotor': rightMotorHandle}
                 sensors = {'leftFrontUltrasonic': ultraSonicSensorLeftFront,
@@ -121,7 +124,7 @@ class Simulation():
                            'rightFrontUltrasonic': ultraSonicSensorRightFront,
                            'rightBackUltrasonic': ultraSonicSensorRightBack,
                            'targetSensor': pioneerRobotHandle}
-                return cls(Agent(None, actuators, sensors, pioneerRobotHandle, client, synchronous), Environment(blockHandleArray), connectionTime, client)
+                return cls(Agent(None, actuators, sensors, pioneerRobotHandle, client, simulationDt, synchronous), Environment(blockHandleArray), connectionTime, client)
             else:  # API error
                 print(f'Error: Remote API error [{res}]')
                 quit()
@@ -245,7 +248,7 @@ class Simulation():
 
     @property
     def simulationStep(self):
-        res, dt =  vrep.simxGetFloatingParameter(
-                self._client, vrepConst.sim_floatparam_simulation_time_step,
-                vrepConst.simx_opmode_blocking)
+        res, dt = vrep.simxGetFloatingParameter(
+            self._client, vrepConst.sim_floatparam_simulation_time_step,
+            vrepConst.simx_opmode_blocking)
         return dt if res == vrepConst.simx_return_ok else res
