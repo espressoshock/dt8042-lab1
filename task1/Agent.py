@@ -14,11 +14,12 @@ class Agent():
     #########################
     ### Constructor
     #########################
-    def __init__(self, name: str, actuators: dict, sensors: dict, agentHandle: int, client: str):
+    def __init__(self, name: str, actuators: dict, sensors: dict, agentHandle: int, client: str, execModeSync: bool = True):
         self._agentHandle = agentHandle
         self._client = client
         self._actuators = actuators
         self._sensors = sensors
+        self._execModeSync = execModeSync
 
     #########################
     ### Methods to override
@@ -44,11 +45,11 @@ class Agent():
     ## Right
     def driveRight(self, baseVelocity: float = 2, turningRadius: float = 1.5):
         self._setMotorSpeed(baseVelocity + turningRadius, baseVelocity)
-    
+
     ## Stop the motion
     def driveBreak(self):
-        self._setMotorSpeed(0,0)
-    
+        self._setMotorSpeed(0, 0)
+
     ## drive in _direction_ for _time_
     def drive(self, direction: str = 'forward', velocity: float = 2, duration: float = 2.0):
         if direction not in ['forward', 'backward', 'left', 'right', 'spin']:
@@ -62,37 +63,29 @@ class Agent():
     ## Spin -> clockwise direction
     def driveSpin(self, baseVelocity: float = 1, turningAngle: float = 90):
         sAngle = self._getOrientation()
-        if turningAngle < 0:
-            self._setMotorSpeed(-baseVelocity, baseVelocity)
-            correction = baseVelocity * 18 # need differential correction
-            print('sAngle: ', self._getOrientation())
-            print('target: ', sAngle + (-turningAngle))
-            while self._getOrientation() <  (sAngle + (-turningAngle)) - correction:
-                print('angle: ', self._getOrientation())
-                pass
-        else:
-            self._setMotorSpeed(baseVelocity, -baseVelocity)
-            correction = baseVelocity * 18 # need differential correction
-            #print('sAngle: ', self._getOrientation())
-            #print('target: ', sAngle + (-turningAngle))
-            while self._getOrientation() >  (sAngle - turningAngle) + correction:
-                print('angle: ', self._getOrientation())
-                pass
-        self.driveBreak()
-        #print('final angle: ', self._getOrientation())
+        print('sAngle: ', self._getOrientation())
+        print('target: ', sAngle + turningAngle)
+        while self._getOrientation() < 90:
+            print('angle: ', self._getOrientation())
+            self._setMotorSpeed(0, 0)
+            #input('type')
+            self._setMotorSpeed(-300, 300)
+            vrep.simxSynchronousTrigger(self._client)
+        print('final angle: ', self._getOrientation())
 
     ## Spin Unsupervised
     def driveSpinunsupervised(self, baseVelocity: float = 2):
         self._setMotorSpeed(baseVelocity, -baseVelocity)
 
-
     #########################
     ### Privates
     #########################
     ## set motorSpeed (cmd sent together) of both wheels
+
     def _setMotorSpeed(self, leftMotorSpeed: float = 0, rightMotorSpeed: float = 0):
-        # pause to transmit both commands
-        vrep.simxPauseCommunication(self._client, 1)
+        if not self._execModeSync:
+            # pause to transmit both commands
+            vrep.simxPauseCommunication(self._client, 1)
         try:
             vrep.simxSetJointTargetVelocity(
                 clientID=self._client,
@@ -107,9 +100,16 @@ class Agent():
                 operationMode=vrepConst.simx_opmode_oneshot
             )
         finally:
-            vrep.simxPauseCommunication(self._client, 0)  # resume
+            if self._execModeSync:
+                print('Next render triggered')
+                vrep.simxSynchronousTrigger(self._client)
+                # make sure sim.step is over
+                vrep.simxGetPingTime(self._client)
+            else:
+                vrep.simxPauseCommunication(self._client, 0)  # resume
 
     ## Get sensors data
+
     def _getSensorData(self, sensor: int):
         # get obstacle distance given sensor (handler)
         def _getObstacleDist(sensorHandler_):  # from original implementation
