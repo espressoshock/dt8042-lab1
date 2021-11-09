@@ -137,7 +137,7 @@ class Agent():
     def _getOrientation(self):
         retCode, agentPosition = vrep.simxGetObjectOrientation(
             self._client, self._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
-        return agentPosition[2] * 180 / math.pi
+        return (agentPosition[2] / (2*math.pi))*360
         #return self.normalizeAngle(math.pi / 2 - agentPosition[2]) # deprecated
 
     #################################
