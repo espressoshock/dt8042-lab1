@@ -59,6 +59,9 @@ class Simulation():
                     quit()
                 else:
                     print(f'[Synchronized mode enabled and accepted]')
+            else: #Asynchronous
+                vrep.simxStartSimulation(
+                    clientID=client, operationMode=vrepConst.simx_opmode_oneshot)
             # get objects
             res, objs = vrep.simxGetObjects(
                 client, vrepConst.sim_handle_all, vrepConst.simx_opmode_oneshot_wait)
