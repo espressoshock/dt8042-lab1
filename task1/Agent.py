@@ -140,13 +140,13 @@ class Agent():
                 clientID=self._client,
                 jointHandle=self._actuators['leftMotor'],
                 targetVelocity=leftMotorSpeed,
-                operationMode=vrepConst.simx_opmode_oneshot_wait
+                operationMode=vrepConst.simx_opmode_oneshot
             )
             vrep.simxSetJointTargetVelocity(
                 clientID=self._client,
                 jointHandle=self._actuators['rightMotor'],
                 targetVelocity=rightMotorSpeed,
-                operationMode=vrepConst.simx_opmode_oneshot_wait
+                operationMode=vrepConst.simx_opmode_oneshot
             )
         finally:
             if self._execModeSync:
@@ -154,7 +154,7 @@ class Agent():
             else:
                 vrep.simxPauseCommunication(self._client, 0)  # resume
             # make sure sim.step is over
-            vrep.simxGetPingTime(self._client)
+            #vrep.simxGetPingTime(self._client)
 
     # set wheel torque to avoid slipping -> and preserve trajectory linearity
     def _setTorque(self, torque: float):

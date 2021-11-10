@@ -27,10 +27,10 @@ class FixedAgent(Agent):
     #########################
     def act(self):
         ######## PARAMS #######
-        ROT_SPEED = self.maxSpeed
-        TRAVELLING_SPEED = self.maxSpeed
-        ORTHO_DT_TICKS = 21
-        ORTHO_DT_TICKS_CORNER = 7 + ORTHO_DT_TICKS
+        ROT_SPEED = int(self.maxSpeed//2)
+        TRAVELLING_SPEED = int(self.maxSpeed//2)
+        ORTHO_DT_TICKS = 10
+        ORTHO_DT_TICKS_CORNER = ORTHO_DT_TICKS
         ######## PARAMS #######
 
         # ======================
@@ -38,6 +38,6 @@ class FixedAgent(Agent):
         # ======================
 
         self.driveRotateClockwise(ROT_SPEED, ORTHO_DT_TICKS)
-        self.driveForward(TRAVELLING_SPEED, 30)
+        self.driveForward(TRAVELLING_SPEED, 25)
         self.driveRotateUnclockwise(ROT_SPEED, ORTHO_DT_TICKS_CORNER)
-        self.driveForward(TRAVELLING_SPEED, 100)
+        self.driveForward(TRAVELLING_SPEED, 50)
