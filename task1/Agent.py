@@ -32,9 +32,17 @@ class Agent():
     #########################
     ### Steering Methods
     #########################
+    # Ticks functionality only works for sync-mode
+    # where tick @ interval sim.dt | n*dt
+    ############################################
+
     ## forwards
-    def driveForward(self, baseVelocity: float = 2):
-        self._setMotorSpeed(baseVelocity, baseVelocity)
+    def driveForward(self, baseVelocity: float = 2, ticks: int = None):
+        if ticks and self._execModeSync:
+            for i in range(ticks):
+                self._setMotorSpeed(baseVelocity, baseVelocity)
+        else:
+            self._setMotorSpeed(baseVelocity, baseVelocity)
 
     ## backwards
     def driveBackward(self, baseVelocity: float = 2):
@@ -57,7 +65,6 @@ class Agent():
     # ============================================
 
     ## Stop the motion
-
     def driveBreak(self):
         self._setMotorSpeed(0, 0)
 
