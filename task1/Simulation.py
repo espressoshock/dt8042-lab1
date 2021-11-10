@@ -20,6 +20,7 @@ class Simulation():
     #########################
     TARGET_COLLECTION_RANGE = 0.5
     SIM_STEP_DT = 25
+    TOP_SPEED = 7 * 60 * math.pi / 180  # 7*60deg/s
 
     #########################
     ### Constructor
@@ -60,14 +61,17 @@ class Simulation():
                     quit()
                 else:
                     print(f'[Synchronized mode enabled and accepted]')
-            else: #Asynchronous
+            else:  # Asynchronous
                 vrep.simxStartSimulation(
                     clientID=client, operationMode=vrepConst.simx_opmode_oneshot)
-            simSetRes = vrep.simxSetFloatingParameter(client, vrepConst.sim_floatparam_simulation_time_step, cls.SIM_STEP_DT, vrepConst.simx_opmode_oneshot_wait)
+            simSetRes = vrep.simxSetFloatingParameter(
+                client, vrepConst.sim_floatparam_simulation_time_step, Simulation.SIM_STEP_DT, vrepConst.simx_opmode_oneshot_wait)
             if simSetRes == vrepConst.simx_return_ok:
-                print(f'[Simulation step (dt) set to {cls.SIM_STEP_DT}]')
-            else: 
-                print(f'Error when setting custom simulation dt, make sure you have set a custom simulation time step in V-REP!')
+                print(
+                    f'[Simulation step (dt) set to {Simulation.SIM_STEP_DT}]')
+            else:
+                print(
+                    f'Error when setting custom simulation dt, make sure you have set a custom simulation time step in V-REP!')
             # get objects
             res, objs = vrep.simxGetObjects(
                 client, vrepConst.sim_handle_all, vrepConst.simx_opmode_oneshot_wait)
@@ -133,15 +137,13 @@ class Simulation():
                            'rightFrontUltrasonic': ultraSonicSensorRightFront,
                            'rightBackUltrasonic': ultraSonicSensorRightBack,
                            'targetSensor': pioneerRobotHandle}
-                return cls(Agent(None, actuators, sensors, pioneerRobotHandle, client, simulationDt, synchronous), Environment(blockHandleArray), connectionTime, client)
+                return cls(Agent(None, actuators, sensors, pioneerRobotHandle, client, simulationDt, Simulation.TOP_SPEED, synchronous), Environment(blockHandleArray), connectionTime, client)
             else:  # API error
                 print(f'Error: Remote API error [{res}]')
                 quit()
-                return -1
         else:  # client => -1
             print(f'Error: Connection failed')
             quit()
-        return -1
 
     #########################
     ### Sim.Starters
