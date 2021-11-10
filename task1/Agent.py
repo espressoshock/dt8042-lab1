@@ -45,8 +45,12 @@ class Agent():
             self._setMotorSpeed(baseVelocity, baseVelocity)
 
     ## backwards
-    def driveBackward(self, baseVelocity: float = 2):
-        self._setMotorSpeed(-baseVelocity, -baseVelocity)
+    def driveBackward(self, baseVelocity: float = 2, ticks: int = None):
+        if ticks and self._execModeSync:
+            for i in range(ticks):
+                self._setMotorSpeed(-baseVelocity, -baseVelocity)
+        else:
+            self._setMotorSpeed(-baseVelocity, -baseVelocity)
 
     # ===========================
     # == Turn (Arc trajectory) ==
