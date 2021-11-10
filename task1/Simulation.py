@@ -12,6 +12,7 @@ from Environment import Environment
 import math
 import random
 from threading import Thread
+from colorama import Fore, Back, Style, init
 
 
 class Simulation():
@@ -19,12 +20,28 @@ class Simulation():
     ### SIM-CONSTANTS
     #########################
     TARGET_COLLECTION_RANGE = 0.5
-    SIM_STEP_DT = 25
+    SIM_STEP_DT_PRECISE = 25
+    SIM_STEP_DT_FAST = 100
     TOP_SPEED = 7 * 60 * math.pi / 180  # 7*60deg/s
+
+    #########################
+    ### CONSOLE SIMBOLS
+    #########################
+
+    # =============
+    # == Symbols ==
+    # =============
+
+    CONSOLE_SYM_LINK = '🔗'
+    CONSOLE_SYM_ANTENNA = '📡'
+    CONSOLE_SYM_ID = '🆔'
+    CONSOLE_SYM_PLAY = '⏩'
+    CONSOLE_SYM_STOP = '⏹️'
 
     #########################
     ### Constructor
     #########################
+
     def __init__(self, agent: Agent, environment: Environment, connectionTime: str, client, synchronous: bool = True):
         self._agent = agent
         self._env = environment
@@ -36,9 +53,10 @@ class Simulation():
     ### VREP-init
     #########################
     @classmethod
-    def init(cls, address='127.0.0.1', port=19999, doNotReconnect=True, timeOutInMs=5000, commThreadCycleinMs=5, synchronous: bool = True):
+    def init(cls, address='127.0.0.1', port=19999, doNotReconnect=True, timeOutInMs=5000, commThreadCycleinMs=5, synchronous: bool = True, fast: bool = True):
         vrep.simxFinish(-1)  # just in case, close all opened connections
-        print('Inititializing sim. connection...')
+        init()  # initialize colorama
+        print(f'{Fore.YELLOW} {Simulation.CONSOLE_SYM_ANTENNA} Inititializing sim. connection...{Style.RESET_ALL}')
         client = vrep.simxStart(
             connectionAddress=address,
             connectionPort=port,
@@ -47,37 +65,43 @@ class Simulation():
             timeOutInMs=timeOutInMs,
             commThreadCycleInMs=commThreadCycleinMs)
         if client == vrepConst.simx_return_ok:
-            print(f'Connection to remote API established @ {address}:{port}')
-            print(f'Client ID: {client}')
             print(
-                f'Connection type: {"Synchronous" if synchronous else "Asynchronous"}')
+                f'{Fore.GREEN} {Simulation.CONSOLE_SYM_LINK} Connection to remote API established @ {address}:{port}{Style.RESET_ALL}')
+            print(
+                f'\t{Fore.CYAN}{Simulation.CONSOLE_SYM_ID} Client ID: {client}{Style.RESET_ALL}')
+            print(
+                f'\t{Fore.BLUE} Connection type: {"Synchronous" if synchronous else "Asynchronous"}{Style.RESET_ALL}')
             #enable synch.conn.mode
             if synchronous:
                 syncRes = vrep.simxSynchronous(clientID=client, enable=True)
                 vrep.simxStartSimulation(
                     clientID=client, operationMode=vrepConst.simx_opmode_blocking)
                 if syncRes != vrepConst.simx_return_ok:  # server error, sync.mode not enabled
-                    print(f'Server error, synchronized mode not enabled, quitting...')
+                    print(
+                        f'{Back.RED} Server error, synchronized mode not enabled, quitting... {Style.RESET_ALL}')
                     quit()
                 else:
-                    print(f'[Synchronized mode enabled and accepted]')
+                    print(
+                        f'\t{Fore.GREEN} [Synchronized mode enabled and accepted] {Style.RESET_ALL}')
             else:  # Asynchronous
                 vrep.simxStartSimulation(
                     clientID=client, operationMode=vrepConst.simx_opmode_oneshot)
+            customDt = Simulation.SIM_STEP_DT_FAST if fast else Simulation.SIM_STEP_DT_PRECISE
             simSetRes = vrep.simxSetFloatingParameter(
-                client, vrepConst.sim_floatparam_simulation_time_step, Simulation.SIM_STEP_DT, vrepConst.simx_opmode_oneshot_wait)
-            if simSetRes == vrepConst.simx_return_ok:
+                client, vrepConst.sim_floatparam_simulation_time_step, customDt, vrepConst.simx_opmode_oneshot)
+            if simSetRes > 0:
                 print(
-                    f'[Simulation step (dt) set to {Simulation.SIM_STEP_DT}]')
+                    f'\t{Fore.GREEN} [Simulation step (dt) set to [{"Fast" if fast else "Precise"} Mode] => {customDt} ] {Style.RESET_ALL}')
             else:
                 print(
-                    f'Error when setting custom simulation dt, make sure you have set a custom simulation time step in V-REP!')
+                    f'{Back.RED} Error when setting custom simulation dt, make sure you have set a custom simulation time step in V-REP!{Style.RESET_ALL}')
             # get objects
             res, objs = vrep.simxGetObjects(
                 client, vrepConst.sim_handle_all, vrepConst.simx_opmode_oneshot_wait)
             #successful
             if res == vrepConst.simx_return_ok:
-                print(f'[Number of objects in scene {len(objs)}')
+                print(
+                    f'\t{Fore.BLUE} [Number of objects in scene {len(objs)}]{Style.RESET_ALL}')
                 #########################
                 ### Motors
                 #########################
@@ -161,14 +185,15 @@ class Simulation():
             self._agent.__class__ = MemoryAgent
 
         ## start auto-collect daemon for target fetching
+        #Asynchronous: separate thread approach
         dThread = Thread(
-            target=self._collectTargetsDaemon, args=(False,), daemon=True)  # make sure daemon->destroyed after _exit_
+            target=self._collectTargetsDaemon, args=(True,), daemon=True)  # make sure daemon->destroyed after _exit_
         dThread.start()
 
         # init agent strategy
-        print(f'Simulation of a {type.capitalize()} Agent in progress...')
+        print(f'\n\n{Back.WHITE}{Fore.BLACK} {Simulation.CONSOLE_SYM_PLAY} Simulation of a {type.capitalize()} Agent in progress...{Style.RESET_ALL}\n')
         self._agent.act()
-        print(f'Simulation of a {type.capitalize()} Agent Terminated.')
+        print(f'\n\n{Back.WHITE}{Fore.BLACK} {Simulation.CONSOLE_SYM_STOP}  Simulation of a {type.capitalize()} Agent Terminated. {Style.RESET_ALL}\n')
 
     #########################
     ### Sim.Helpers
@@ -193,7 +218,7 @@ class Simulation():
     ## collects targets in TARGET_COLLECTION_RANGE
     def _collectTargets(self):
         handle, name, distance, direction = self._findTargets()[0]
-        if distance <= self.TARGET_COLLECTION_RANGE:
+        if distance <= self.TARGET_COLLECTION_RANGE + 0.3:
             # hide targets under floor
             vrep.simxPauseCommunication(self._client, 1)
             vrep.simxSetObjectPosition(
@@ -201,16 +226,16 @@ class Simulation():
             vrep.simxPauseCommunication(self._client, 0)
             #update env targets
             self._env.targets[name][-1] = [1000, 1000, -2]
-            return (f'Target collected successfully!')
-        return (f'No targets within {self.TARGET_COLLECTION_RANGE} unit(s)')
+            return (f'{Back.GREEN}{Fore.BLACK} ✔ Target collected successfully!{Style.RESET_ALL}')
+        return (f'❌ No targets within {self.TARGET_COLLECTION_RANGE} unit(s), closest @ {0.0 if math.isnan(distance) else distance:.1f} unit(s)')
 
     ## __collectTargets -> Daemon
-    def _collectTargetsDaemon(self, log: bool = False):
+    def _collectTargetsDaemon(self, log: bool = True):
         while True:
             if log:
                 print(self._collectTargets())
             else:
-                self._collectTargets()
+                self._collectTargets()  # threaded iss.here
 
     #########################
     ### Class methods

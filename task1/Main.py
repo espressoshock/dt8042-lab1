@@ -8,7 +8,7 @@ from Simulation import Simulation
 
 
 def main():
-    with Simulation.init(port=19997, synchronous=True) as sim:
+    with Simulation.init(port=19997, synchronous=True, fast=True) as sim:
         sim.start('fixed')
 
 
