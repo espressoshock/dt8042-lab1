@@ -74,15 +74,28 @@ class Agent():
         else:
             self._setMotorSpeed(baseVelocity + turningStrength, baseVelocity)
 
-    # ============================================
-    # == Rotate (in-place / differential drive) ==
-    # ============================================
-
     ## Stop the motion
     def driveBreak(self):
         self._setMotorSpeed(0, 0)
 
-    ## drive in _direction_ for _time_
+    # ============================================
+    # == Rotate (in-place / differential drive) ==
+    # ============================================
+
+    ## Spin Unclockwise
+    def driveRotateUnclockwise(self, baseVelocity: float = 2, ticks: int = None):
+        if ticks and self._execModeSync:
+            for i in range(ticks):
+                self._setMotorSpeed(
+                    -baseVelocity, baseVelocity)
+        else:
+            self._setMotorSpeed(-baseVelocity, baseVelocity)
+
+    ## Spin Clockwise
+    def driveRotateClockwise(self, baseVelocity: float = 2):
+        self._setMotorSpeed(baseVelocity, -baseVelocity)
+
+    ## drive in _direction_ for _time_ |DEPRECATED|
     def drive(self, direction: str = 'forward', velocity: float = 2, duration: float = 2.0):
         if direction not in ['forward', 'backward', 'left', 'right', 'spin']:
             direction = 'forward'
@@ -91,14 +104,6 @@ class Agent():
         while time.time() < start + duration:
             pass
         self.driveBreak()
-
-    ## Spin Unclockwise
-    def driveRotateUnclockwise(self, baseVelocity: float = 2):
-        self._setMotorSpeed(-baseVelocity, baseVelocity)
-
-    ## Spin Clockwise
-    def driveRotateClockwise(self, baseVelocity: float = 2):
-        self._setMotorSpeed(baseVelocity, -baseVelocity)
 
     #########################
     ### Privates
