@@ -92,8 +92,13 @@ class Agent():
             self._setMotorSpeed(-baseVelocity, baseVelocity)
 
     ## Spin Clockwise
-    def driveRotateClockwise(self, baseVelocity: float = 2):
-        self._setMotorSpeed(baseVelocity, -baseVelocity)
+    def driveRotateClockwise(self, baseVelocity: float = 2, ticks: int = None):
+        if ticks and self._execModeSync:
+            for i in range(ticks):
+                self._setMotorSpeed(
+                    baseVelocity, -baseVelocity)
+        else:
+            self._setMotorSpeed(baseVelocity, -baseVelocity)
 
     ## drive in _direction_ for _time_ |DEPRECATED|
     def drive(self, direction: str = 'forward', velocity: float = 2, duration: float = 2.0):
