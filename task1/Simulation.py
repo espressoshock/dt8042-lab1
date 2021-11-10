@@ -19,7 +19,8 @@ class Simulation():
     ### SIM-CONSTANTS
     #########################
     TARGET_COLLECTION_RANGE = 0.5
-    SIM_STEP_DT = 25
+    SIM_STEP_DT_PRECISE = 25
+    SIM_STEP_DT_FAST = 100
     TOP_SPEED = 7 * 60 * math.pi / 180  # 7*60deg/s
 
     #########################
@@ -36,7 +37,7 @@ class Simulation():
     ### VREP-init
     #########################
     @classmethod
-    def init(cls, address='127.0.0.1', port=19999, doNotReconnect=True, timeOutInMs=5000, commThreadCycleinMs=5, synchronous: bool = True):
+    def init(cls, address='127.0.0.1', port=19999, doNotReconnect=True, timeOutInMs=5000, commThreadCycleinMs=5, synchronous: bool = True, fast: bool = True):
         vrep.simxFinish(-1)  # just in case, close all opened connections
         print('Inititializing sim. connection...')
         client = vrep.simxStart(
@@ -64,11 +65,12 @@ class Simulation():
             else:  # Asynchronous
                 vrep.simxStartSimulation(
                     clientID=client, operationMode=vrepConst.simx_opmode_oneshot)
+            customDt = Simulation.SIM_STEP_DT_FAST if fast else Simulation.SIM_STEP_DT_PRECISE
             simSetRes = vrep.simxSetFloatingParameter(
-                client, vrepConst.sim_floatparam_simulation_time_step, Simulation.SIM_STEP_DT, vrepConst.simx_opmode_oneshot_wait)
+                client, vrepConst.sim_floatparam_simulation_time_step, customDt, vrepConst.simx_opmode_oneshot)
             if simSetRes == vrepConst.simx_return_ok:
                 print(
-                    f'[Simulation step (dt) set to {Simulation.SIM_STEP_DT}]')
+                    f'[Simulation step (dt) set to [{"Fast" if fast else "Precise"} Mode] => {customDt} ]')
             else:
                 print(
                     f'Error when setting custom simulation dt, make sure you have set a custom simulation time step in V-REP!')
