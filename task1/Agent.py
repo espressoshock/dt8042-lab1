@@ -33,6 +33,7 @@ class Agent():
     ### Steering Methods
     #########################
     # Ticks functionality only works for sync-mode
+    # => simulation/render ticks/rate/interrupts
     # where tick @ interval sim.dt | n*dt
     ############################################
 
@@ -57,7 +58,7 @@ class Agent():
     # ===========================
 
     ## Left
-    def driveLeft(self, baseVelocity: float = 2, turningStrength: float = 1.5, ticks: int = None):
+    def driveLeft(self, baseVelocity: float = 2, ticks: int = None, turningStrength: float = 1.5):
         if ticks and self._execModeSync:
             for i in range(ticks):
                 self._setMotorSpeed(
@@ -66,7 +67,7 @@ class Agent():
             self._setMotorSpeed(baseVelocity, baseVelocity + turningStrength)
 
     ## Right
-    def driveRight(self, baseVelocity: float = 2, turningStrength: float = 1.5, ticks: int = None):
+    def driveRight(self, baseVelocity: float = 2, ticks: int = None, turningStrength: float = 1.5):
         if ticks and self._execModeSync:
             for i in range(ticks):
                 self._setMotorSpeed(
@@ -75,7 +76,8 @@ class Agent():
             self._setMotorSpeed(baseVelocity + turningStrength, baseVelocity)
 
     ## Stop the motion
-    def driveBreak(self):
+    # workaround for multi-args calls
+    def driveBreak(self, *args):
         self._setMotorSpeed(0, 0)
 
     # ============================================
@@ -111,6 +113,21 @@ class Agent():
         self.driveBreak()
 
     #########################
+    ### Utils
+    #########################
+    # Only for sync-mode
+    # Convert: rate (ticks/interrupts) <-> time (ms)
+    ############################################
+
+    # rate -> ms
+    def ticksToMs(self, ticks):
+        return int(self._simDt * ticks)
+
+    # ms -> ticks | ms has to be multiple of _simDT || int div
+    def msToTicks(self, ms):
+        return int(ms // self._simDt)
+
+    #########################
     ### Privates
     #########################
     ## set motorSpeed (cmd sent together) of both wheels
@@ -123,13 +140,13 @@ class Agent():
                 clientID=self._client,
                 jointHandle=self._actuators['leftMotor'],
                 targetVelocity=leftMotorSpeed,
-                operationMode=vrepConst.simx_opmode_oneshot
+                operationMode=vrepConst.simx_opmode_oneshot_wait
             )
             vrep.simxSetJointTargetVelocity(
                 clientID=self._client,
                 jointHandle=self._actuators['rightMotor'],
                 targetVelocity=rightMotorSpeed,
-                operationMode=vrepConst.simx_opmode_oneshot
+                operationMode=vrepConst.simx_opmode_oneshot_wait
             )
         finally:
             if self._execModeSync:
@@ -202,6 +219,10 @@ class Agent():
     #########################
     ### PROPS
     #########################
+    @property
+    def maxSpeed(self):
+        return self._topSpeed
+
     @property
     def orientation(self):
         return self._getOrientation()
