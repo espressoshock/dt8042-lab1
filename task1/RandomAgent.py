@@ -2,8 +2,9 @@
 ### RandomAgent Class
 ##########################
 
+# =IMPORTS
 from Agent import Agent
-import random, time
+import random
 
 
 class RandomAgent(Agent):
@@ -18,31 +19,27 @@ class RandomAgent(Agent):
     #########################
     def act(self):
         ######## PARAMS #######
-        simDuration = 10 # sim.duration
-        strCSwitchPeriod = 10  # time period per strategy before switching
+        strCSwitchPeriod = 2  # time period per strategy before switching
+        simIters = 5  # sim. iterations
         ######## PARAMS #######
-        for i in range(simDuration):
-            action = self._randomAction()
-            cSimTime = 0
-            while cSimTime < strCSwitchPeriod:
-                action()
-                cSimTime += self._simDt
-        super().driveBreak()
+
+        for i in range(simIters):
+            self._randomAction()(self.maxSpeed, self.msToTicks(strCSwitchPeriod))
 
     ## Get random action
-    def _getRandomAction(self):
+    def _getRandomActionName(self):
         allowedActions = ['forward', 'backward',
-                          'left', 'right', 'spinUnsupervised', 'break']
+                          'left', 'right', 'break']
         return (random.choice(allowedActions)).capitalize()
 
-    ## execute random drive action
+    ## execute random drive action / no args
     def _execRandomAction(self):
         rAction = self._getRandomAction()
         print(f'- Executing random action => [{rAction}]')
         getattr(super(), 'drive'+rAction)()
-    
+
     ## get random drive action method
     def _randomAction(self):
-        rAction = self._getRandomAction()
+        rAction = self._getRandomActionName()
         print(f'- Executing random action => [{rAction}]')
         return getattr(super(), 'drive'+rAction)
