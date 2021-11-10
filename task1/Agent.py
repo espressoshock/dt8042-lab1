@@ -60,13 +60,19 @@ class Agent():
     def driveLeft(self, baseVelocity: float = 2, turningStrength: float = 1.5, ticks: int = None):
         if ticks and self._execModeSync:
             for i in range(ticks):
-                self._setMotorSpeed(baseVelocity, baseVelocity + turningStrength)
+                self._setMotorSpeed(
+                    baseVelocity, baseVelocity + turningStrength)
         else:
             self._setMotorSpeed(baseVelocity, baseVelocity + turningStrength)
 
     ## Right
-    def driveRight(self, baseVelocity: float = 2, turningStrength: float = 1.5):
-        self._setMotorSpeed(baseVelocity + turningRadius, baseVelocity)
+    def driveRight(self, baseVelocity: float = 2, turningStrength: float = 1.5, ticks: int = None):
+        if ticks and self._execModeSync:
+            for i in range(ticks):
+                self._setMotorSpeed(
+                    baseVelocity + turningStrength, baseVelocity)
+        else:
+            self._setMotorSpeed(baseVelocity + turningStrength, baseVelocity)
 
     # ============================================
     # == Rotate (in-place / differential drive) ==
