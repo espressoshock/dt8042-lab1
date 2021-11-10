@@ -206,6 +206,9 @@ class Agent():
         return (agentPosition[2] / (2*math.pi))*360
         #return self.normalizeAngle(math.pi / 2 - agentPosition[2]) # deprecated
 
+    #trigger render
+    def triggerRender(self):
+        vrep.simxSynchronousTrigger(self._client)
     #################################
     ####### DEL ME #################
     #################################
