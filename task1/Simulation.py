@@ -19,6 +19,7 @@ class Simulation():
     ### SIM-CONSTANTS
     #########################
     TARGET_COLLECTION_RANGE = 0.5
+    SIM_STEP_DT = 25
 
     #########################
     ### Constructor
@@ -62,6 +63,11 @@ class Simulation():
             else: #Asynchronous
                 vrep.simxStartSimulation(
                     clientID=client, operationMode=vrepConst.simx_opmode_oneshot)
+            simSetRes = vrep.simxSetFloatingParameter(client, vrepConst.sim_floatparam_simulation_time_step, cls.SIM_STEP_DT, vrepConst.simx_opmode_oneshot_wait)
+            if simSetRes == vrepConst.simx_return_ok:
+                print(f'[Simulation step (dt) set to {cls.SIM_STEP_DT}]')
+            else: 
+                print(f'Error when setting custom simulation dt, make sure you have set a custom simulation time step in V-REP!')
             # get objects
             res, objs = vrep.simxGetObjects(
                 client, vrepConst.sim_handle_all, vrepConst.simx_opmode_oneshot_wait)
