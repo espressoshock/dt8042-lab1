@@ -22,6 +22,7 @@ class Agent():
         self._simDt = simulationDt
         self._topSpeed = topSpeed
         self._setTorque(topSpeed)
+        self._simulation = None
 
     #########################
     ### Methods to override
@@ -212,6 +213,7 @@ class Agent():
     #################################
     ####### DEL ME #################
     #################################
+
     def normalizeAngle(self, angle: float):
         while angle > math.pi:
             angle -= 2*math.pi
@@ -233,3 +235,11 @@ class Agent():
     @property
     def simulationDt(self):
         return self._simDt
+
+    @property
+    def simulation(self):
+        return self._simulation
+
+    @simulation.setter
+    def simulation(self, value):
+        self._simulation = value

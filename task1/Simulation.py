@@ -184,6 +184,9 @@ class Simulation():
         else:  # agent with memory => 'memory'
             self._agent.__class__ = MemoryAgent
 
+        # set simulation
+        self._agent.simulation = self
+
         ## start auto-collect daemon for target fetching
         #Asynchronous: separate thread approach
         dThread = Thread(
@@ -199,7 +202,7 @@ class Simulation():
     ### Sim.Helpers
     #########################
     ## Find targets (energy blocks)
-    def _findTargets(self):
+    def findTargets(self):
         res = []
         retCode, agentPosition = vrep.simxGetObjectPosition(
             self._client, self._agent._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
@@ -216,8 +219,8 @@ class Simulation():
         return res
 
     ## collects targets in TARGET_COLLECTION_RANGE
-    def _collectTargets(self):
-        handle, name, distance, direction = self._findTargets()[0]
+    def collectTargets(self):
+        handle, name, distance, direction = self.findTargets()[0]
         if distance <= self.TARGET_COLLECTION_RANGE + 0.3:
             # hide targets under floor
             vrep.simxPauseCommunication(self._client, 1)
@@ -226,16 +229,16 @@ class Simulation():
             vrep.simxPauseCommunication(self._client, 0)
             #update env targets
             self._env.targets[name][-1] = [1000, 1000, -2]
-            return (f'{Back.GREEN}{Fore.BLACK} ✔ Target collected successfully!{Style.RESET_ALL}')
-        return (f'❌ No targets within {self.TARGET_COLLECTION_RANGE} unit(s), closest @ {0.0 if math.isnan(distance) else distance:.1f} unit(s)')
+            return (f'{Back.GREEN}{Fore.BLACK} ✔ Target collected successfully!{Style.RESET_ALL}\n')
+        return (f'❌ No targets within {self.TARGET_COLLECTION_RANGE} unit(s), closest @ {0.0 if math.isnan(distance) else distance:.1f} unit(s)\n')
 
     ## __collectTargets -> Daemon
     def _collectTargetsDaemon(self, log: bool = True):
         while True:
             if log:
-                print(self._collectTargets())
+                print(self.collectTargets())
             else:
-                self._collectTargets()  # threaded iss.here
+                self.collectTargets()  # threaded iss.here
 
     #########################
     ### Class methods
