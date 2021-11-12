@@ -23,6 +23,7 @@ class Agent():
         self._topSpeed = topSpeed
         self._setTorque(topSpeed)
         self._simulation = None
+        self._targetsCollected = []
 
     #########################
     ### Methods to override
@@ -113,7 +114,7 @@ class Agent():
             pass
         self.driveBreak()
 
-    #########################
+        #########################
     ### Utils
     #########################
     # Only for sync-mode
@@ -210,17 +211,11 @@ class Agent():
     #trigger render
     def triggerRender(self):
         vrep.simxSynchronousTrigger(self._client)
-    #################################
-    ####### DEL ME #################
-    #################################
-
-    def normalizeAngle(self, angle: float):
-        while angle > math.pi:
-            angle -= 2*math.pi
-        while angle < -math.pi:
-            angle += 2*math.pi
-        return angle
-
+    
+    #add collected targets
+    def targetCollected(self, target):
+        self._targetsCollected.append(target)
+    
     #########################
     ### PROPS
     #########################
@@ -243,3 +238,7 @@ class Agent():
     @simulation.setter
     def simulation(self, value):
         self._simulation = value
+
+    @property
+    def targetsCollected(self):
+        return self._targetsCollected
