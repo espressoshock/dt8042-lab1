@@ -15,6 +15,12 @@ class ReflexAgent(Agent):
     #########################
     TARGET_SELECTION_RANGE = 5
     DT_OFFSET = 30
+    TARGET_DX_THRESHOLD = 0.1
+    TARGET_DY_THRESHOLD = 0.1
+    TRAVELLING_SPEED = 5
+    PRECISION_ROTATION_SPEED = 2
+    POINT_TO_ALLOWED_VARIATION = 0.05
+    SIM_OFFSET_RAD= 0.2
 
     #########################
     ### Constructor
@@ -26,6 +32,7 @@ class ReflexAgent(Agent):
     # =======================
     # == Utils / Movements ==
     # =======================
+
     def _printTargetPool(self, targetPool):
         for target in targetPool:
             print(f'{target[1]}: {target[2]}, dir: {target[3]}')
@@ -36,23 +43,160 @@ class ReflexAgent(Agent):
         print('closestTargetOFfset: ', offset)
         return targetPool[offset][0]  # target handle
 
-    def _getRelativePosition(self, handle):
+    def _getDirectionToTarget(self, handle):
         relPos = vrep.simxGetObjectPosition(
             self._client, handle, self._agentHandle, vrepConst.simx_opmode_oneshot_wait)
         #print(f'x: {relPos[1][0]}, y: {relPos[1][1]}')
         return relPos
 
-    def _getAgentPos(self):
-        res, agentPos = vrep.simxGetObjectPosition(
-            self._client, self._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
-        #print(f'x: {relPos[1][0]}, y: {relPos[1][1]}')
-        return agentPos
+    # ======================
+    # == Main Entry Point ==
+    # ======================
 
-    def _getAgentQuaternion(self):
-        agentPos = vrep.simxGetObjectQuaternion(
-            self._client, self._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
-        #print(f'x: {relPos[1][0]}, y: {relPos[1][1]}')
-        return agentPos
+    def _act(self):
+        offset = 0 # start from first
+        while len(self.targetsCollected) < 10: # just for convinience => no memory here :) 
+            ####################
+            #    Perception    #
+            ####################
+            # (1) Find targets #
+            #  Select closest  #
+            ####################
+            ct = self._selectClosestTarget(offset)
+            ####################
+            # (2) Try to move  #
+            #  Towards target  #
+            ####################
+            offset = self._tryToMoveTowardsTarget(ct)
+        print('total collected targets: ', self.targetsCollected)
+        time.sleep(2)
+        
+
+    # =============================
+    # == (2) Move towards target ==
+    # =============================
+    def _tryToMoveTowardsTarget(self, target):
+        tx = self._getDirectionToTarget(target)[1][0]
+        ty = self._getDirectionToTarget(target)[1][1]
+        print(f'Target selected. Trying to move towards...')
+        if tx >= 0: 
+            while abs(self._getDirectionToTarget(target)[1][0]) > self.TARGET_DX_THRESHOLD:
+                print(f'[Strategy]=> Moving forward')
+                if target in self._targetsCollected: # for convinience, might wanna replace this
+                    return 0
+                self.simulation.collectTargets()
+                self.driveForward(self.TRAVELLING_SPEED)
+                #check if you find a wall, then switch strategy
+        else: # you can simplify this
+             while abs(self._getDirectionToTarget(target)[1][0]) > self.TARGET_DX_THRESHOLD:
+                print(f'[Strategy]=> Moving backward')
+                if target in self._targetsCollected: # for convinience, might wanna replace this
+                    return 0
+                self.simulation.collectTargets()
+                self.driveBackward(self.TRAVELLING_SPEED)
+                #check if you find a wall, then switch strategy
+        if ty >= 0:
+            self.pointToTarget(target)
+            while abs(self._getDirectionToTarget(target)[1][1]) > self.TARGET_DY_THRESHOLD:
+                print(f'[Strategy]=> Moving upward')
+                if target in self._targetsCollected:
+                    return 0
+                self.simulation.collectTargets()
+                self.driveForward(self.TRAVELLING_SPEED)
+                #check if you find a wall, then switch strategy
+        else:
+            self.pointToTarget(target)
+            while abs(self._getDirectionToTarget(target)[1][1]) > self.TARGET_DY_THRESHOLD:
+                print(f'[Strategy]=> Moving downward')
+                if target in self._targetsCollected:
+                    return 0
+                self.simulation.collectTargets()
+                self.driveForward(self.TRAVELLING_SPEED)
+                #check if you find a wall, then switch strategy
+        return 0 # next, no offset
+
+    # =============================
+    # == (2) Move towards target ==
+    # =============================
+    def pointToTarget(self, target):
+        # target = self._selectClosestTarget(offset)
+
+        # to->direction
+        x, y, _ = self.direction
+        # euler orientation angles
+        alpha, beta, gamma = self.orientation
+        #target
+        gx, gy, _ = self.gp(target)
+
+        #rotation
+        dx = gx - x
+        dy = gy - y
+        # destination angle-> atan(dy, dx)
+        while abs((math.atan2(dy, dx)) - gamma - self.SIM_OFFSET_RAD) > self.POINT_TO_ALLOWED_VARIATION: # python add do-while please
+            # rotate
+            self.driveRotateUnclockwise(self.PRECISION_ROTATION_SPEED) # improve this by integrating dx,dy
+            # recalculate rot-diff. on x,y
+            dx = gx - x
+            dy = gy - y
+            # update current agent direction for integration
+            x, y, _ = self.direction
+            alpha, beta, gamma = self.orientation
+
+
+    # passed handle
+
+
+    # ================
+    # == Algo Tests ==
+    # ================
+
+    def testMoveTowardsTargetOrtho(self, target):  # ortho approach
+        x = self._getDirectionToTarget(target)[1][0]
+        y = self._getDirectionToTarget(target)[1][1]
+        #self.simulation.collectTargets()
+        print(f'x: {x}, y: {y}')
+        print(self._targetsCollected)
+        print(target)
+        if x >= 0:
+            while abs(self._getDirectionToTarget(target)[1][0]) > 0.5:
+                print('going forwards')
+                if target in self._targetsCollected:
+                    return 0
+                self.simulation.collectTargets()
+                if self._amIGonnaCrash(flipped=False) > 0:
+                    return 1
+                self.driveForward(7)
+        else:
+            while abs(self._getDirectionToTarget(target)[1][0]) > 0.5:
+                print('going back')
+                if target in self._targetsCollected:
+                    return 0
+                self.simulation.collectTargets()
+                if self._amIGonnaCrash(flipped=True) > 0:
+                    return 1
+                self.driveBackward(7)
+        if y >= 0:
+            self.rotateUp()
+            while abs(self._getDirectionToTarget(target)[1][1]) > 0.5:
+                print('going up')
+                if target in self._targetsCollected:
+                    return 0
+                self.simulation.collectTargets()
+                if self._amIGonnaCrash(flipped=False) > 0:
+                    return 1
+                self.driveForward(7)
+        else:
+            self.rotateDown()
+            while abs(self._getDirectionToTarget(target)[1][1]) > 0.5:
+                print('going down')
+                if target in self._targetsCollected:
+                    return 0
+                self.simulation.collectTargets()
+                if self._amIGonnaCrash(flipped=False) > 0:
+                    return 1
+                self.driveForward(7)
+        print(self.simulation.collectTargets())
+        return 0
 
     def _amIGonnaCrash(self, flipped: bool = False):
         if flipped:
@@ -69,133 +213,7 @@ class ReflexAgent(Agent):
                 return 1
         return 0
 
-    def rotateUp(self):
-        while self.orientation < 90 - self.DT_OFFSET:
-            self.driveRotateUnclockwise(4)
-        print('orient: ', self.orientation)
-
-    def rotateDown(self):
-        while self.orientation > -90 + self.DT_OFFSET:
-            self.driveRotateClockwise(4)
-        print('orient: ', self.orientation)
-
-    # passed handle
-    def _moveTowardsTargetOrtho(self, target):  # ortho approach
-        x = self._getRelativePosition(target)[1][0]
-        y = self._getRelativePosition(target)[1][1]
-        #self.simulation.collectTargets()
-        print(f'x: {x}, y: {y}')
-        print(self._targetsCollected)
-        print(target)
-        if x >= 0:
-            while abs(self._getRelativePosition(target)[1][0]) > 0.5:
-                print('going forwards')
-                if target in self._targetsCollected:
-                    return 0
-                self.simulation.collectTargets()
-                if self._amIGonnaCrash(flipped=False) > 0:
-                    return 1
-                self.driveForward(7)
-        else:
-            while abs(self._getRelativePosition(target)[1][0]) > 0.5:
-                print('going back')
-                if target in self._targetsCollected:
-                    return 0
-                self.simulation.collectTargets()
-                if self._amIGonnaCrash(flipped=True) > 0:
-                    return 1
-                self.driveBackward(7)
-        if y >= 0:
-            self.rotateUp()
-            while abs(self._getRelativePosition(target)[1][1]) > 0.5:
-                print('going up')
-                if target in self._targetsCollected:
-                    return 0
-                self.simulation.collectTargets()
-                if self._amIGonnaCrash(flipped=False) > 0:
-                    return 1
-                self.driveForward(7)
-        else:
-            self.rotateDown()
-            while abs(self._getRelativePosition(target)[1][1]) > 0.5:
-                print('going down')
-                if target in self._targetsCollected:
-                    return 0
-                self.simulation.collectTargets()
-                if self._amIGonnaCrash(flipped=False) > 0:
-                    return 1
-                self.driveForward(7)
-        print(self.simulation.collectTargets())
-        return 0
-
-    def _moveTowardsTargetArc(self, target):  # ortho approach
-        x = self._getRelativePosition(target)[1][0]
-        y = self._getRelativePosition(target)[1][1]
-        #self.simulation.collectTargets()
-        print(f'x: {x}, y: {y}')
-        print(self._targetsCollected)
-        print(target)
-        if x >= 0:
-            while abs(self._getRelativePosition(target)[1][0]) > 0.5:
-                print('going forwards')
-                if target in self._targetsCollected:
-                    return 0
-                self.simulation.collectTargets()
-                if self._amIGonnaCrash(flipped=False) > 0:
-                    return 1
-                self.driveForward(7)
-        else:
-            while abs(self._getRelativePosition(target)[1][0]) > 0.5:
-                print('going back')
-                if target in self._targetsCollected:
-                    return 0
-                self.simulation.collectTargets()
-                if self._amIGonnaCrash(flipped=True) > 0:
-                    return 1
-                self.driveBackward(7)
-        if y >= 0:
-            #make the turn
-            angleToGoal = math.atan2(y, x)
-            roll, pitch, theta = self._getAgentPos()
-            while abs(angleToGoal - self._getAgentPos()[2]) > 0.1:  # radians
-                self.driveRotateClockwise(4)
-
-            while abs(self._getRelativePosition(target)[1][1]) > 0.5:
-                print('going up')
-                if target in self._targetsCollected:
-                    return 0
-                self.simulation.collectTargets()
-                if self._amIGonnaCrash(flipped=False) > 0:
-                    return 1
-                self.driveForward(7)
-        else:
-            #make turn
-            while self.orientation > 90:  # check for y alignment
-                self.driveRight(4)
-            while abs(self._getRelativePosition(target)[1][1]) > 0.5:
-                print('going down')
-                if target in self._targetsCollected:
-                    return 0
-                self.simulation.collectTargets()
-                if self._amIGonnaCrash(flipped=False) > 0:
-                    return 1
-                self.driveForward(7)
-        print(self.simulation.collectTargets())
-        return 0
-
-    def gp(self, handle):
-        res, pos = vrep.simxGetObjectPosition(
-            self._client, handle, -1, vrepConst.simx_opmode_oneshot_wait)
-        #print(f'x: {relPos[1][0]}, y: {relPos[1][1]}')
-        return pos
-
-    def go(self, handle):
-        res, ori = vrep.simxGetObjectOrientation(
-            self._client, handle, -1, vrepConst.simx_opmode_oneshot_wait)
-        #print(f'x: {relPos[1][0]}, y: {relPos[1][1]}')
-        return ori
-
-    def tryOrientationFinder(self):
+    def testOrientationFinder(self):
         tTargets = 1
         print(self._selectClosestTarget())
         offset = 3
@@ -225,7 +243,7 @@ class ReflexAgent(Agent):
             roll, pitch, theta = self.go(self._agentHandle)
         print('end angle', angleToGoal-theta)
 
-    def tryFollowWall(self):
+    def testFollowWall(self):
         def findWall():
             self.driveForward(4)
             #self.driveRotateClockwise(4)
@@ -238,22 +256,28 @@ class ReflexAgent(Agent):
                 print('theta: ', theta)
                 self.driveRotateUnclockwise(2)
             print('end angle', theta)
-        
+
         def turnLeft():
             roll, pitch, startT = self.go(self._agentHandle)
             #while self.go(self._agentHandle)[2] <
-            self.driveRotateUnclockwise(4)
+            self.driveRotateUnclockwise(5)
 
+        def turnRight():
+            roll, pitch, startT = self.go(self._agentHandle)
+            #while self.go(self._agentHandle)[2] <
+            self.driveRotateClockwise(5)
 
         def followWall():
             self.driveForward(4)
 
             ## correction
-            x = self._getSensorData(self._sensors['rightFrontUltrasonic'])['euclideanDistance']
-            y = self._getSensorData(self._sensors['rightBackUltrasonic'])['euclideanDistance']
+            x = self._getSensorData(self._sensors['rightFrontUltrasonic'])[
+                'euclideanDistance']
+            y = self._getSensorData(self._sensors['rightBackUltrasonic'])[
+                'euclideanDistance']
             print(x, y)
             if True:
-                if x > 0.6: 
+                if x > 0.6:
                     self.driveLeft(baseVelocity=4, turningStrength=2)
                 if y > 0.6:
                     self.driveRight(baseVelocity=4, turningStrength=2)
@@ -261,7 +285,7 @@ class ReflexAgent(Agent):
                 if x > y:
                     print('drive right')
                     self.driveRight(baseVelocity=4, turningStrength=2)
-                else: #x > y
+                else:  # x > y
                     print('drive left')
                     self.driveLeft(baseVelocity=4, turningStrength=2)
             '''
@@ -273,54 +297,80 @@ class ReflexAgent(Agent):
                 self.driveLeft(baseVelocity=4, turningStrength=2)
             '''
 
-
-
         def readSensors():
             ##g-vars
             state_dict_ = {
                 0: 'find the wall',
                 1: 'turn left',
                 2: 'follow wall',
+                3: 'turn right'
             }
             ## sensors
             d = 0.4
+            D = 0.4
            # print('front', self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'])
             #print('frontL', self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'])
             #print('frontR', self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'])
             #print('SIDE: ', self._getSensorData(self._sensors['rightFrontUltrasonic'])['euclideanDistance'])
-            if self._getSensorData(self._sensors['rightFrontUltrasonic'])['euclideanDistance'] < d and self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d:
+            if (self._getSensorData(self._sensors['rightFrontUltrasonic'])['euclideanDistance'] < d and 
+                self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and 
+                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and 
+                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
                 # case 0 / followint the wall
-                print(f'{state_dict_[2]} SPECIAL CASE')
+                print(f'{state_dict_[2]} SPECIAL CASE 1')
                 return 2
-            elif self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d:
+            elif (self._getSensorData(self._sensors['rightBackUltrasonic'])['euclideanDistance'] < d and
+                  self._getSensorData(self._sensors['rightFrontUltrasonic'])['euclideanDistance'] > D and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > D and
+                  self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > D and 
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > D):
+                print(f'{state_dict_[3]} SPECIAL CASE 2(3)')
+                return 3
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and
+                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and 
+                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
                 #case 1 / nothing
                 print(f'{state_dict_[0]}')
                 return 0
-            elif self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < d and self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d:
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < d and 
+                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and 
+                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
                 # 'case 2 - front'
                 print(f'{state_dict_[1]}')
                 return 1
-            elif self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d:
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and 
+                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and 
+                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d):
                 # 'case 3 - fright'
                 print(f'{state_dict_[2]}')
                 return 2
-            elif self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d:
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and 
+                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and 
+                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
                 # 'case 4 - fleft'
                 print(f'{state_dict_[0]}')
                 return 0
-            elif self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < d and self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d:
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < d and
+                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and 
+                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d):
                 # 'case 5 - front and fright'
                 print(f'{state_dict_[1]}')
                 return 1
-            elif self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < d and self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d:
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < d and 
+                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and 
+                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
                 # 'case 6 - front and fleft'
                 print(f'{state_dict_[1]}')
                 return 1
-            elif self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < d and self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d:
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < d and
+                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and 
+                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d):
                 # 'case 7 - front and fleft and fright'
                 print(f'{state_dict_[1]}')
                 return 1
-            elif self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d:
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and 
+                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and
+                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d):
                 # 'case 8 - fleft and fright'
                 print(f'{state_dict_[0]}')
                 return 0
@@ -332,6 +382,7 @@ class ReflexAgent(Agent):
 
         ## main logic
         while done:
+            self.simulation.collectTargets() #just to test ->  to avoid collision
             state = readSensors()
             if state == 0:
                 findWall()
@@ -339,18 +390,54 @@ class ReflexAgent(Agent):
                 turnLeft()
             elif state == 2:
                 followWall()
+            elif state == 3:
+                turnRight()
             else:
                 print('unknown state')
+    
+    def _getAgentPos(self):
+        res, agentPos = vrep.simxGetObjectPosition(
+            self._client, self._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
+        #print(f'x: {relPos[1][0]}, y: {relPos[1][1]}')
+        return agentPos
+
+    def _getAgentQuaternion(self):
+        agentPos = vrep.simxGetObjectQuaternion(
+            self._client, self._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
+        #print(f'x: {relPos[1][0]}, y: {relPos[1][1]}')
+        return agentPos
+    
+    def gp(self, handle):
+        res, pos = vrep.simxGetObjectPosition(
+            self._client, handle, -1, vrepConst.simx_opmode_oneshot_wait)
+        #print(f'x: {relPos[1][0]}, y: {relPos[1][1]}')
+        return pos
+
+    def go(self, handle):
+        res, ori = vrep.simxGetObjectOrientation(
+            self._client, handle, -1, vrepConst.simx_opmode_oneshot_wait)
+        #print(f'x: {relPos[1][0]}, y: {relPos[1][1]}')
+        return ori
+
+    def rotateUp(self):
+        while self.orientation < 90 - self.DT_OFFSET:
+            self.driveRotateUnclockwise(4)
+        print('orient: ', self.orientation)
+
+    def rotateDown(self):
+        while self.orientation > -90 + self.DT_OFFSET:
+            self.driveRotateClockwise(4)
+        print('orient: ', self.orientation)
 
     #########################
     ### Override
     #########################
-
     def act(self):
         #self.tryOrientationFinder()
-        self.tryFollowWall()
-        
-       
+        #self.testFollowWall()
+        self._act()
+        #self.pointToTarget(8)
+
         '''
         while abs(angleToGoal - theta) > 0.05:
             print('res; ', angleToGoal-theta)
