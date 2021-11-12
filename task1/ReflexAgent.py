@@ -20,7 +20,8 @@ class ReflexAgent(Agent):
     TRAVELLING_SPEED = 5
     PRECISION_ROTATION_SPEED = 2
     POINT_TO_ALLOWED_VARIATION = 0.05
-    SIM_OFFSET_RAD= 0.2
+    SIM_OFFSET_RAD = 0.2
+    AGENT_TO_WALL_THREASHOLD_DISTANCE = 0.4
 
     #########################
     ### Constructor
@@ -116,7 +117,7 @@ class ReflexAgent(Agent):
         return 0 # next, no offset
 
     # =============================
-    # == (2) Move towards target ==
+    # == (2.1) Point to target   ==
     # =============================
     def pointToTarget(self, target):
         # target = self._selectClosestTarget(offset)
@@ -141,6 +142,17 @@ class ReflexAgent(Agent):
             # update current agent direction for integration
             x, y, _ = self.direction
             alpha, beta, gamma = self.orientation
+
+    # ====================
+    # == wall detection ==
+    # ====================
+    def isWallAhead(self):
+        if (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+            self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and 
+            self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
+            return False
+        else:
+            return True
 
 
     # passed handle
