@@ -125,6 +125,10 @@ class Simulation():
                 ####### Front ############
                 ret_sl,  ultraSonicSensorFront = vrep.simxGetObjectHandle(
                     client, 'Pioneer_p3dx_ultrasonicSensor4', vrepConst.simx_opmode_oneshot_wait)
+                ret_sl,  ultraSonicSensorFrontLeft = vrep.simxGetObjectHandle(
+                    client, 'Pioneer_p3dx_ultrasonicSensor3', vrepConst.simx_opmode_oneshot_wait)
+                ret_sl,  ultraSonicSensorFrontRight = vrep.simxGetObjectHandle(
+                    client, 'Pioneer_p3dx_ultrasonicSensor6', vrepConst.simx_opmode_oneshot_wait)
                 ####### Right ############
                 ret_sl,  ultraSonicSensorRightFront = vrep.simxGetObjectHandle(
                     client, 'Pioneer_p3dx_ultrasonicSensor8', vrepConst.simx_opmode_oneshot_wait)
@@ -158,6 +162,9 @@ class Simulation():
                 sensors = {'leftFrontUltrasonic': ultraSonicSensorLeftFront,
                            'leftBackUltrasonic': ultraSonicSensorLeftBack,
                            'frontUltrasonic': ultraSonicSensorFront,
+                           'frontLeftUltrasonic': ultraSonicSensorFrontLeft,
+                           'frontRightUltrasonic': ultraSonicSensorFrontRight,
+                           'backUltrasonic': ultraSonicSensorBack,
                            'rightFrontUltrasonic': ultraSonicSensorRightFront,
                            'rightBackUltrasonic': ultraSonicSensorRightBack,
                            'targetSensor': pioneerRobotHandle}
@@ -184,11 +191,14 @@ class Simulation():
         else:  # agent with memory => 'memory'
             self._agent.__class__ = MemoryAgent
 
+        # set simulation
+        self._agent.simulation = self
+
         ## start auto-collect daemon for target fetching
         #Asynchronous: separate thread approach
         dThread = Thread(
             target=self._collectTargetsDaemon, args=(True,), daemon=True)  # make sure daemon->destroyed after _exit_
-        dThread.start()
+        #dThread.start()
 
         # init agent strategy
         print(f'\n\n{Back.WHITE}{Fore.BLACK} {Simulation.CONSOLE_SYM_PLAY} Simulation of a {type.capitalize()} Agent in progress...{Style.RESET_ALL}\n')
@@ -199,7 +209,7 @@ class Simulation():
     ### Sim.Helpers
     #########################
     ## Find targets (energy blocks)
-    def _findTargets(self):
+    def findTargets(self):
         res = []
         retCode, agentPosition = vrep.simxGetObjectPosition(
             self._client, self._agent._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
@@ -209,16 +219,16 @@ class Simulation():
             # compute Euclidean distance (in 2-D)
             distance = math.sqrt(relativePos[0]**2 + relativePos[1]**2)
             absDirection = math.atan2(relativePos[0], relativePos[1])
-            direction = Simulation.normalizeAngle(
-                absDirection - self._agent.orientation)
+            direction = (position[2] / (2*math.pi))*360
+            #direction = self.normalizeAngle(absDirection - self._agent.orientation)
             res.append((handle, name, distance, direction))
         res.sort(key=lambda xx: xx[2])
         return res
 
     ## collects targets in TARGET_COLLECTION_RANGE
-    def _collectTargets(self):
-        handle, name, distance, direction = self._findTargets()[0]
-        if distance <= self.TARGET_COLLECTION_RANGE + 0.3:
+    def collectTargets(self, missLog: bool = True, hitLog: bool = True):
+        handle, name, distance, direction = self.findTargets()[0]
+        if distance <= self.TARGET_COLLECTION_RANGE + 0.0:
             # hide targets under floor
             vrep.simxPauseCommunication(self._client, 1)
             vrep.simxSetObjectPosition(
@@ -226,16 +236,23 @@ class Simulation():
             vrep.simxPauseCommunication(self._client, 0)
             #update env targets
             self._env.targets[name][-1] = [1000, 1000, -2]
-            return (f'{Back.GREEN}{Fore.BLACK} ✔ Target collected successfully!{Style.RESET_ALL}')
-        return (f'❌ No targets within {self.TARGET_COLLECTION_RANGE} unit(s), closest @ {0.0 if math.isnan(distance) else distance:.1f} unit(s)')
+            self._agent.targetCollected(handle)  # targets collected
+            if hitLog:
+                print(
+                    f'\n{Back.GREEN}{Fore.BLACK} ✔ Target collected successfully!  {Back.CYAN} {distance:.1f} unit(s){Style.RESET_ALL}')
+            return handle
+        if missLog:
+            print(
+                f'\n❌ No targets within {self.TARGET_COLLECTION_RANGE} unit(s), closest @ {0.0 if math.isnan(distance) else distance:.1f} unit(s)')
+        return False
 
     ## __collectTargets -> Daemon
     def _collectTargetsDaemon(self, log: bool = True):
         while True:
             if log:
-                print(self._collectTargets())
+                print(self.collectTargets())
             else:
-                self._collectTargets()  # threaded iss.here
+                self.collectTargets()  # threaded iss.here
 
     #########################
     ### Class methods

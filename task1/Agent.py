@@ -22,6 +22,8 @@ class Agent():
         self._simDt = simulationDt
         self._topSpeed = topSpeed
         self._setTorque(topSpeed)
+        self._simulation = None
+        self._targetsCollected = []
 
     #########################
     ### Methods to override
@@ -112,7 +114,7 @@ class Agent():
             pass
         self.driveBreak()
 
-    #########################
+        #########################
     ### Utils
     #########################
     # Only for sync-mode
@@ -200,7 +202,7 @@ class Agent():
         return _getObstacleDist(sensor)
 
     ## Get agent orientation
-    def _getOrientation(self):
+    def _getOrientationInDeg(self):
         retCode, agentPosition = vrep.simxGetObjectOrientation(
             self._client, self._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
         return (agentPosition[2] / (2*math.pi))*360
@@ -209,15 +211,16 @@ class Agent():
     #trigger render
     def triggerRender(self):
         vrep.simxSynchronousTrigger(self._client)
-    #################################
-    ####### DEL ME #################
-    #################################
-    def normalizeAngle(self, angle: float):
-        while angle > math.pi:
-            angle -= 2*math.pi
-        while angle < -math.pi:
-            angle += 2*math.pi
-        return angle
+
+    #add collected targets
+    def targetCollected(self, target):
+        self._targetsCollected.append(target)
+
+    # get directon
+    def _getDirection(self):
+        res, direction = vrep.simxGetObjectPosition(
+            self._client, self._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
+        return direction
 
     #########################
     ### PROPS
@@ -227,9 +230,31 @@ class Agent():
         return self._topSpeed
 
     @property
-    def orientation(self):
+    def orientationInDeg(self):
         return self._getOrientation()
+
+    @property
+    def orientation(self):
+        res, orientation = vrep.simxGetObjectOrientation(
+            self._client, self._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
+        return orientation
 
     @property
     def simulationDt(self):
         return self._simDt
+
+    @property
+    def simulation(self):
+        return self._simulation
+
+    @simulation.setter
+    def simulation(self, value):
+        self._simulation = value
+
+    @property
+    def targetsCollected(self):
+        return self._targetsCollected
+
+    @property
+    def direction(self):
+        return self._getDirection()
