@@ -17,18 +17,35 @@ class ReflexAgent(Agent):
     DT_OFFSET = 30
     TARGET_DX_THRESHOLD = 0.1
     TARGET_DY_THRESHOLD = 0.1
-    TRAVELLING_SPEED = 5
+    TARGET_SWITCH_THREASHOLD_RANGE = 1
+    TRAVELLING_SPEED = 4
+    FOLLOWING_WALL_SPEED = 4
     PRECISION_ROTATION_SPEED = 2
-    POINT_TO_ALLOWED_VARIATION = 0.05
+    FAST_ROTATION_SPEED = 4
+    POINT_TO_ALLOWED_VARIATION = 0.1
     SIM_OFFSET_RAD = 0.2
     AGENT_TO_WALL_THREASHOLD_DISTANCE = 0.4
+    AGENT_TO_INF_THREASHOLD_DISTANCE = 0.4
+    AGENT_TO_WALL_SHIFT_CORRECTION_DISTANCE = 0.6
+    AGENT_TO_WALL_SHIFT_CORRECTION_SPEED = 4
+    AGENT_TO_WALL_SHIFT_CORRECTION_TURNING_STRENGTH = 3.5
+
+    REFLEX_AGENT_STATES = {
+        0: 'Idle',
+        1: 'Moving to target',
+        2: 'Looking for wall edge',
+        3: 'Rotate left',
+        4: 'Following wall edge',
+        5: 'Rotate right'
+    }
 
     #########################
     ### Constructor
     #########################
     def __init__(self):
         super().__init__()
-        self._cTarget = None  # current (selected) target
+        self._cTarget = None  # current (selected) target |deprecated|
+        self._state = 0
 
     # =======================
     # == Utils / Movements ==
@@ -55,8 +72,8 @@ class ReflexAgent(Agent):
     # ======================
 
     def _act(self):
-        offset = 0 # start from first
-        while len(self.targetsCollected) < 10: # just for convinience => no memory here :) 
+        offset = 0  # start from first
+        while len(self.targetsCollected) < 10:  # just for convinience => no memory here :)
             ####################
             #    Perception    #
             ####################
@@ -71,50 +88,58 @@ class ReflexAgent(Agent):
             offset = self._tryToMoveTowardsTarget(ct)
         print('total collected targets: ', self.targetsCollected)
         time.sleep(2)
-        
 
     # =============================
     # == (2) Move towards target ==
     # =============================
+
     def _tryToMoveTowardsTarget(self, target):
         tx = self._getDirectionToTarget(target)[1][0]
         ty = self._getDirectionToTarget(target)[1][1]
         print(f'Target selected. Trying to move towards...')
-        if tx >= 0: 
+        if tx >= 0:
             while abs(self._getDirectionToTarget(target)[1][0]) > self.TARGET_DX_THRESHOLD:
                 print(f'[Strategy]=> Moving forward')
-                if target in self._targetsCollected: # for convinience, might wanna replace this
+                if target in self._targetsCollected:  # for convinience, might wanna replace this
                     return 0
-                self.simulation.collectTargets()
+                self.simulation.collectTargets(False, True)
                 self.driveForward(self.TRAVELLING_SPEED)
                 #check if you find a wall, then switch strategy
-        else: # you can simplify this
-             while abs(self._getDirectionToTarget(target)[1][0]) > self.TARGET_DX_THRESHOLD:
+                if self.isWallAhead():
+                    self.followWall(target)
+        else:  # you can simplify this
+            while abs(self._getDirectionToTarget(target)[1][0]) > self.TARGET_DX_THRESHOLD:
                 print(f'[Strategy]=> Moving backward')
-                if target in self._targetsCollected: # for convinience, might wanna replace this
+                if target in self._targetsCollected:  # for convinience, might wanna replace this
                     return 0
-                self.simulation.collectTargets()
+                self.simulation.collectTargets(False, True)
                 self.driveBackward(self.TRAVELLING_SPEED)
                 #check if you find a wall, then switch strategy
+                if self.isWallAhead():
+                    self.followWall(target)
         if ty >= 0:
             self.pointToTarget(target)
             while abs(self._getDirectionToTarget(target)[1][1]) > self.TARGET_DY_THRESHOLD:
                 print(f'[Strategy]=> Moving upward')
                 if target in self._targetsCollected:
                     return 0
-                self.simulation.collectTargets()
+                self.simulation.collectTargets(False, True)
                 self.driveForward(self.TRAVELLING_SPEED)
                 #check if you find a wall, then switch strategy
+                if self.isWallAhead():
+                    self.followWall(target)
         else:
             self.pointToTarget(target)
             while abs(self._getDirectionToTarget(target)[1][1]) > self.TARGET_DY_THRESHOLD:
                 print(f'[Strategy]=> Moving downward')
                 if target in self._targetsCollected:
                     return 0
-                self.simulation.collectTargets()
+                self.simulation.collectTargets(False, True)
                 self.driveForward(self.TRAVELLING_SPEED)
                 #check if you find a wall, then switch strategy
-        return 0 # next, no offset
+                if self.isWallAhead():
+                    self.followWall(target)
+        return 0  # next, no offset
 
     # =============================
     # == (2.1) Point to target   ==
@@ -133,9 +158,11 @@ class ReflexAgent(Agent):
         dx = gx - x
         dy = gy - y
         # destination angle-> atan(dy, dx)
-        while abs((math.atan2(dy, dx)) - gamma - self.SIM_OFFSET_RAD) > self.POINT_TO_ALLOWED_VARIATION: # python add do-while please
+        # python add do-while please
+        while abs((math.atan2(dy, dx)) - gamma - self.SIM_OFFSET_RAD) > self.POINT_TO_ALLOWED_VARIATION:
             # rotate
-            self.driveRotateUnclockwise(self.PRECISION_ROTATION_SPEED) # improve this by integrating dx,dy
+            # improve this by integrating dx,dy
+            self.driveRotateUnclockwise(self.PRECISION_ROTATION_SPEED)
             # recalculate rot-diff. on x,y
             dx = gx - x
             dy = gy - y
@@ -148,15 +175,147 @@ class ReflexAgent(Agent):
     # ====================
     def isWallAhead(self):
         if (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
-            self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and 
-            self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
+            self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
             return False
         else:
             return True
 
+    # =======================
+    # == (3) Wall folowing ==
+    # =======================
+    def followWall(self, target):
 
-    # passed handle
+        def findWallEdge():
+            self.driveForward(self.FOLLOWING_WALL_SPEED)
 
+        def rotateLeft():
+            self.driveRotateUnclockwise(self.FAST_ROTATION_SPEED)
+
+        def rotateRight():
+            self.driveRotateClockwise(self.FAST_ROTATION_SPEED)
+            #self.driveRight(baseVelocity=2,turningStrength=12)
+
+        def followWallEdge():
+            self.driveForward(self.FOLLOWING_WALL_SPEED)
+
+            # apply shift correction
+            x = self._getSensorData(self._sensors['rightFrontUltrasonic'])[
+                'euclideanDistance']
+            y = self._getSensorData(self._sensors['rightBackUltrasonic'])[
+                'euclideanDistance']
+            if True:  # might wanna apply constraint here
+                if x > self.AGENT_TO_WALL_SHIFT_CORRECTION_DISTANCE:
+                    print(f'[Correction Strategy]=> Shift Left')
+                    self.driveLeft(baseVelocity=self.AGENT_TO_WALL_SHIFT_CORRECTION_SPEED,
+                                   turningStrength=self.AGENT_TO_WALL_SHIFT_CORRECTION_TURNING_STRENGTH)
+                if y > self.AGENT_TO_WALL_SHIFT_CORRECTION_DISTANCE:
+                    print(f'[Correction Strategy]=> Shift Right')
+                    self.driveRight(baseVelocity=self.AGENT_TO_WALL_SHIFT_CORRECTION_SPEED,
+                                    turningStrength=self.AGENT_TO_WALL_SHIFT_CORRECTION_TURNING_STRENGTH)
+                if x > y:
+                    print(f'[Correction Strategy]=> Shift Right')
+                    self.driveRight(baseVelocity=self.AGENT_TO_WALL_SHIFT_CORRECTION_SPEED,
+                                    turningStrength=self.AGENT_TO_WALL_SHIFT_CORRECTION_TURNING_STRENGTH)
+                else:  # x > y
+                    print(f'[Correction Strategy]=> Shift Left')
+                    self.driveLeft(baseVelocity=self.AGENT_TO_WALL_SHIFT_CORRECTION_SPEED,
+                                   turningStrength=self.AGENT_TO_WALL_SHIFT_CORRECTION_TURNING_STRENGTH)
+
+        def readSensors():
+            if (self._getSensorData(self._sensors['rightFrontUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                    self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
+                # special case 1 / following the wall
+                self._state = 4
+                print(
+                    f'{self.REFLEX_AGENT_STATES[self._state]} [Special Case]')
+                return self._state
+            elif (self._getSensorData(self._sensors['rightBackUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['rightFrontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_INF_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_INF_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_INF_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_INF_THREASHOLD_DISTANCE):
+                # special case 2 / turning around wall corner
+                self._state = 5
+                print(
+                    f'{self.REFLEX_AGENT_STATES[self._state]} [Special Case]')
+                return self._state
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
+                # case 1 / nothing
+                self._state = 2
+                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                return self._state
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
+                # case 2 / front detection
+                self._state = 3
+                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                return self._state
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
+                # case 3 / front-right detection
+                self._state = 4
+                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                return self._state
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
+                # case 4 / front-left detection
+                self._state = 2
+                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                return self._state
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
+                # case 5 / front and front-right detection
+                self._state = 3
+                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                return self._state
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
+                # case 6 / front and front-left detection
+                self._state = 3
+                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                return self._state
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
+                # case 7 / front and front-left and front-right detection
+                self._state = 3
+                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                return self._state
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
+                # case 8 / front-left and front-right detection
+                self._state = 2
+                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                return self._state
+            else:
+              print('Error: Unknown state')
+              pass
+
+        while target not in self.targetsCollected:
+            readSensors()
+            if self.simulation.collectTargets(False, True) == target or target in self.targetsCollected:
+                return 0
+            if self._state == 2:
+                findWallEdge()
+            elif self._state == 3:
+                rotateLeft()
+            elif self._state == 4:
+                followWallEdge()
+            elif self._state == 5:
+                rotateRight()
+            else:
+                print('error unknown state')
 
     # ================
     # == Algo Tests ==
@@ -324,65 +483,65 @@ class ReflexAgent(Agent):
             #print('frontL', self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'])
             #print('frontR', self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'])
             #print('SIDE: ', self._getSensorData(self._sensors['rightFrontUltrasonic'])['euclideanDistance'])
-            if (self._getSensorData(self._sensors['rightFrontUltrasonic'])['euclideanDistance'] < d and 
-                self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and 
-                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and 
-                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
+            if (self._getSensorData(self._sensors['rightFrontUltrasonic'])['euclideanDistance'] < d and
+                self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and
+                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and
+                    self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
                 # case 0 / followint the wall
                 print(f'{state_dict_[2]} SPECIAL CASE 1')
                 return 2
             elif (self._getSensorData(self._sensors['rightBackUltrasonic'])['euclideanDistance'] < d and
                   self._getSensorData(self._sensors['rightFrontUltrasonic'])['euclideanDistance'] > D and
                   self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > D and
-                  self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > D and 
+                  self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > D and
                   self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > D):
                 print(f'{state_dict_[3]} SPECIAL CASE 2(3)')
                 return 3
             elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and
-                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and 
-                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
                 #case 1 / nothing
                 print(f'{state_dict_[0]}')
                 return 0
-            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < d and 
-                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and 
-                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < d and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
                 # 'case 2 - front'
                 print(f'{state_dict_[1]}')
                 return 1
-            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and 
-                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and 
-                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d):
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d):
                 # 'case 3 - fright'
                 print(f'{state_dict_[2]}')
                 return 2
-            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and 
-                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and 
-                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
                 # 'case 4 - fleft'
                 print(f'{state_dict_[0]}')
                 return 0
             elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < d and
-                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and 
-                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d):
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > d and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d):
                 # 'case 5 - front and fright'
                 print(f'{state_dict_[1]}')
                 return 1
-            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < d and 
-                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and 
-                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < d and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > d):
                 # 'case 6 - front and fleft'
                 print(f'{state_dict_[1]}')
                 return 1
             elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < d and
-                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and 
-                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d):
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d):
                 # 'case 7 - front and fleft and fright'
                 print(f'{state_dict_[1]}')
                 return 1
-            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and 
-                self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and
-                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d):
+            elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > d and
+                  self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < d and
+                  self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < d):
                 # 'case 8 - fleft and fright'
                 print(f'{state_dict_[0]}')
                 return 0
@@ -394,7 +553,7 @@ class ReflexAgent(Agent):
 
         ## main logic
         while done:
-            self.simulation.collectTargets() #just to test ->  to avoid collision
+            self.simulation.collectTargets()  # just to test ->  to avoid collision
             state = readSensors()
             if state == 0:
                 findWall()
@@ -406,7 +565,7 @@ class ReflexAgent(Agent):
                 turnRight()
             else:
                 print('unknown state')
-    
+
     def _getAgentPos(self):
         res, agentPos = vrep.simxGetObjectPosition(
             self._client, self._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
@@ -418,7 +577,7 @@ class ReflexAgent(Agent):
             self._client, self._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
         #print(f'x: {relPos[1][0]}, y: {relPos[1][1]}')
         return agentPos
-    
+
     def gp(self, handle):
         res, pos = vrep.simxGetObjectPosition(
             self._client, handle, -1, vrepConst.simx_opmode_oneshot_wait)
@@ -449,6 +608,7 @@ class ReflexAgent(Agent):
         #self.testFollowWall()
         self._act()
         #self.pointToTarget(8)
+        #self.followWall()
 
         '''
         while abs(angleToGoal - theta) > 0.05:

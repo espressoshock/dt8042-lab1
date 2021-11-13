@@ -226,9 +226,9 @@ class Simulation():
         return res
 
     ## collects targets in TARGET_COLLECTION_RANGE
-    def collectTargets(self):
+    def collectTargets(self, missLog: bool = True, hitLog: bool = True):
         handle, name, distance, direction = self.findTargets()[0]
-        if distance <= self.TARGET_COLLECTION_RANGE + 0.1:
+        if distance <= self.TARGET_COLLECTION_RANGE + 0.0:
             # hide targets under floor
             vrep.simxPauseCommunication(self._client, 1)
             vrep.simxSetObjectPosition(
@@ -236,9 +236,15 @@ class Simulation():
             vrep.simxPauseCommunication(self._client, 0)
             #update env targets
             self._env.targets[name][-1] = [1000, 1000, -2]
-            self._agent.targetCollected(handle) #targets collected
-            return (f'\n{Back.GREEN}{Fore.BLACK} ✔ Target collected successfully!  {Back.CYAN} {distance:.1f} unit(s){Style.RESET_ALL}')
-        return (f'\n❌ No targets within {self.TARGET_COLLECTION_RANGE} unit(s), closest @ {0.0 if math.isnan(distance) else distance:.1f} unit(s)')
+            self._agent.targetCollected(handle)  # targets collected
+            if hitLog:
+                print(
+                    f'\n{Back.GREEN}{Fore.BLACK} ✔ Target collected successfully!  {Back.CYAN} {distance:.1f} unit(s){Style.RESET_ALL}')
+            return handle
+        if missLog:
+            print(
+                f'\n❌ No targets within {self.TARGET_COLLECTION_RANGE} unit(s), closest @ {0.0 if math.isnan(distance) else distance:.1f} unit(s)')
+        return False
 
     ## __collectTargets -> Daemon
     def _collectTargetsDaemon(self, log: bool = True):
