@@ -23,8 +23,8 @@ class Card:
         from Deck import Deck
         return Deck.VALUES.index(str(self._value)) > Deck.VALUES.index(str(other._value))
 
-    #def __eq__(self, other):
-    #    return self._value == other._value
+    def __eq__(self, other):
+       return self._value == other._value
 
     # ====================
     # == Representation ==
