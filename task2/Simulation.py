@@ -56,7 +56,6 @@ class Simulation:
             elif self.compareHands(self._player1.show_cards(hand), self._player2.show_cards(hand)) == 1:
                 self._player1.receive_winnings(pot, hand)
                 self._player2.receive_winnings(0, hand)
-                self._player1.receive_winnings(0, hand)  # for convienience
             else:  # tie
                 # N.D
                 pass
@@ -102,11 +101,11 @@ class Simulation:
     #########################
     def compareHands(self, hand1: list, hand2: list):
         def is_3_of_a_kind(hand):
-            return hand[0].value == hand[1].value == hand[2].value
+            return hand[0] == hand[1] == hand[2]
 
         def is_one_pair(hand):
-            return (hand[0].value == hand[1].value or
-                    hand[0].value == hand[2].value or hand[1] == hand[2].value)
+            return (hand[0] == hand[1] or
+                    hand[0] == hand[2] or hand[1] == hand[2])
         # different rank
         if is_3_of_a_kind(hand1) and not is_3_of_a_kind(hand2):
             return 1
