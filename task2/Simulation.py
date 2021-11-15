@@ -6,9 +6,11 @@
 from Card import Card
 from Agent import Agent
 from Deck import Deck
-from colorama import Fore, Back, Style, init
-
 from ReflexAgentMemory import ReflexAgentMemory
+
+from colorama import Fore, Back, Style, init
+from tqdm import tqdm
+import time
 
 
 class Simulation:
@@ -31,7 +33,11 @@ class Simulation:
     #########################
     def start(self):
 
-        for hand in range(self._hand_count):
+        print(
+            f'{Back.YELLOW}{Fore.BLACK}  Simulation {Back.GREEN} Started  {Style.RESET_ALL} \n')
+        # Track Progress
+        hand_pool = tqdm(range(self._hand_count))
+        for hand in hand_pool:
 
             # ===========================
             # == Phase 1: Card Dealing ==
@@ -70,6 +76,12 @@ class Simulation:
                 self._player1.memorize(self._player2.hands[hand])
             if isinstance(self._player2, ReflexAgentMemory):
                 self._player2.memorize(self._player1.hands[hand])
+
+            # for visualization only
+            time.sleep(0.1)
+            hand_pool.set_description(f'Simulating Hand [{hand}]')
+        print(
+            f'\n{Back.YELLOW}{Fore.BLACK}  Simulation {Back.GREEN} Finished  {Style.RESET_ALL} \n')
 
     ####################
     ### Show results ###
