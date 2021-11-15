@@ -4,6 +4,8 @@
 
 from Agent import Agent
 import time
+from tqdm import tqdm
+from colorama import Fore, Back, Style, init
 
 
 class FixedAgent(Agent):
@@ -21,6 +23,13 @@ class FixedAgent(Agent):
         self._setTorque(0)
         time.sleep(4)
         self._setTorque(0.5)
+    
+    def execAndLog(self, logger, action, actionName):
+        logger.set_description(
+            f'{Back.BLUE} Action {Back.MAGENTA} {actionName}  {Style.RESET_ALL}')
+        action
+        logger.update(1)
+
 
     #########################
     ### override
@@ -36,8 +45,10 @@ class FixedAgent(Agent):
         # ======================
         # == Zig-zag strategy ==
         # ======================
+        
+        with tqdm(total=4) as simIters:
+            self.execAndLog(simIters, self.driveRotateClockwise(ROT_SPEED, ORTHO_DT_TICKS), 'driveRotateClockwise')
+            self.execAndLog(simIters, self.driveForward(TRAVELLING_SPEED, 25), 'driveForward')
+            self.execAndLog(simIters, self.driveRotateUnclockwise(ROT_SPEED, ORTHO_DT_TICKS_CORNER), 'driveRotateUnclockwise')
+            self.execAndLog(simIters, self.driveForward(TRAVELLING_SPEED, 50), 'driveForward')
 
-        self.driveRotateClockwise(ROT_SPEED, ORTHO_DT_TICKS)
-        self.driveForward(TRAVELLING_SPEED, 25)
-        self.driveRotateUnclockwise(ROT_SPEED, ORTHO_DT_TICKS_CORNER)
-        self.driveForward(TRAVELLING_SPEED, 50)
