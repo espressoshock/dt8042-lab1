@@ -8,6 +8,8 @@ from Agent import Agent
 from Deck import Deck
 from colorama import Fore, Back, Style, init
 
+from ReflexAgentMemory import ReflexAgentMemory
+
 
 class Simulation:
     #########################
@@ -59,6 +61,12 @@ class Simulation:
             else:  # tie
                 # N.D
                 pass
+
+            ## memorization
+            if isinstance(self._player1, ReflexAgentMemory):
+                self._player1.memorize(self._player2.hands[hand])
+            if isinstance(self._player2, ReflexAgentMemory):
+                self._player2.memorize(self._player1.hands[hand])
 
     ####################
     ### Show results ###
