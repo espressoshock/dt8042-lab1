@@ -20,13 +20,11 @@ class Simulation:
             player1, ReflexAgentMemory) else player2
         self._player2 = player2 if (isinstance(
             player2, ReflexAgentMemory) and not isinstance(player1, ReflexAgentMemory)) else player1
-
         self._hand_count = hand_count
         self._bid_count = bid_count
         self._player1.set_hands_count(hand_count)
         self._player2.set_hands_count(hand_count)
         init()  # init colorama
-        print(self._player1.__class__, self._player2.__class__)
 
     #########################
     ### Start / Game Flow ###
@@ -104,6 +102,9 @@ class Simulation:
             f'{Back.MAGENTA} Player 2 {Style.RESET_ALL} Total winnings: {p2_totwinnings}')
         print(
             f'Difference: {abs(p1_totwinnings-p2_totwinnings)} in favors of {"Player 1" if p1_totwinnings > p2_totwinnings else "Player 2"}')
+        if isinstance(self._player2, ReflexAgentMemory):
+            print(
+                f'{Back.LIGHTYELLOW_EX}{Fore.BLACK}  Deduced opponent: {Back.GREEN}  {self._player2.AGENTS_[self._player2.deduce_opponent()]} Agent {Style.RESET_ALL}')
 
     #########################
     ### Hand Comparison   ###

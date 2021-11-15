@@ -9,6 +9,15 @@ from Hand import Hand
 
 class ReflexAgentMemory(Agent):
     #########################
+    ### Consts
+    #########################
+    AGENTS_ = {
+        0: 'Random',
+        1: 'Fixed',
+        2: 'Reflex'
+    }
+
+    #########################
     ### Constructor
     #########################
     def __init__(self, name: str = 'Player 1'):
@@ -79,7 +88,6 @@ class ReflexAgentMemory(Agent):
         # =====================
         bid = 0
         if(len(self._memory) > 0):
-            print('Deduced opponent is', self.deduce_opponent())
             if self.deduce_opponent() == 0:
                 bid = default_strategy(self._hands[hand].cards)
             elif self.deduce_opponent() == 1:
