@@ -7,6 +7,8 @@ import math
 from libs import vrep
 from libs import vrepConst
 import time
+from tqdm import tqdm
+from colorama import Fore, Back, Style, init
 
 
 class ReflexAgent(Agent):
@@ -57,8 +59,8 @@ class ReflexAgent(Agent):
 
     def _selectClosestTarget(self, offset: int = 0):
         targetPool = self.simulation.findTargets()
-        print(f'closest target {targetPool[0][1], targetPool[0][0]}')
-        print('closestTargetOFfset: ', offset)
+        #print(f'closest target {targetPool[0][1], targetPool[0][0]}')
+        #print('closestTargetOFfset: ', offset)
         return targetPool[offset][0]  # target handle
 
     def _getDirectionToTarget(self, handle):
@@ -66,6 +68,15 @@ class ReflexAgent(Agent):
             self._client, handle, self._agentHandle, vrepConst.simx_opmode_oneshot_wait)
         #print(f'x: {relPos[1][0]}, y: {relPos[1][1]}')
         return relPos
+
+    def log(self, action: str, type: str = 'Action'):
+        if len(action) < 15:
+            self.clearLog()
+        print(
+            f'{Back.BLUE} {type}  {Back.MAGENTA} {action}  {Style.RESET_ALL}', end='\r')
+
+    def clearLog(self):
+        print('\x1b[2K\r', end='\r')
 
     # ======================
     # == Main Entry Point ==
@@ -86,7 +97,8 @@ class ReflexAgent(Agent):
             #  Towards target  #
             ####################
             offset = self._tryToMoveTowardsTarget(ct)
-        print('total collected targets: ', self.targetsCollected)
+        self.log(type='total collected targets: ',
+                 action=self.targetsCollected)
         time.sleep(2)
 
     # =============================
@@ -96,10 +108,13 @@ class ReflexAgent(Agent):
     def _tryToMoveTowardsTarget(self, target):
         tx = self._getDirectionToTarget(target)[1][0]
         ty = self._getDirectionToTarget(target)[1][1]
-        print(f'Target selected. Trying to move towards...')
+        self.log(type='Target selected', action='Trying to move towards...')
+        time.sleep(1)
+        self.clearLog()
         if tx >= 0:
             while abs(self._getDirectionToTarget(target)[1][0]) > self.TARGET_DX_THRESHOLD:
-                print(f'[Strategy]=> Moving forward')
+                #print(f'[Strategy]=> Moving forward')
+                self.log('Forward', 'Strategy')
                 if target in self._targetsCollected:  # for convinience, might wanna replace this
                     return 0
                 self.simulation.collectTargets(False, True)
@@ -109,7 +124,8 @@ class ReflexAgent(Agent):
                     self.followWall(target)
         else:  # you can simplify this
             while abs(self._getDirectionToTarget(target)[1][0]) > self.TARGET_DX_THRESHOLD:
-                print(f'[Strategy]=> Moving backward')
+                #print(f'[Strategy]=> Moving backward')
+                self.log('Backward', 'Strategy')
                 if target in self._targetsCollected:  # for convinience, might wanna replace this
                     return 0
                 self.simulation.collectTargets(False, True)
@@ -120,7 +136,8 @@ class ReflexAgent(Agent):
         if ty >= 0:
             self.pointToTarget(target)
             while abs(self._getDirectionToTarget(target)[1][1]) > self.TARGET_DY_THRESHOLD:
-                print(f'[Strategy]=> Moving upward')
+                #print(f'[Strategy]=> Moving upward')
+                self.log('Upward', 'Strategy')
                 if target in self._targetsCollected:
                     return 0
                 self.simulation.collectTargets(False, True)
@@ -131,7 +148,8 @@ class ReflexAgent(Agent):
         else:
             self.pointToTarget(target)
             while abs(self._getDirectionToTarget(target)[1][1]) > self.TARGET_DY_THRESHOLD:
-                print(f'[Strategy]=> Moving downward')
+                #print(f'[Strategy]=> Moving downward')
+                self.log('Downward', 'Strategy')
                 if target in self._targetsCollected:
                     return 0
                 self.simulation.collectTargets(False, True)
@@ -206,19 +224,19 @@ class ReflexAgent(Agent):
                 'euclideanDistance']
             if True:  # might wanna apply constraint here
                 if x > self.AGENT_TO_WALL_SHIFT_CORRECTION_DISTANCE:
-                    print(f'[Correction Strategy]=> Shift Left')
+                    self.log(type='Correction Strategy', action='Shift Left')
                     self.driveLeft(baseVelocity=self.AGENT_TO_WALL_SHIFT_CORRECTION_SPEED,
                                    turningStrength=self.AGENT_TO_WALL_SHIFT_CORRECTION_TURNING_STRENGTH)
                 if y > self.AGENT_TO_WALL_SHIFT_CORRECTION_DISTANCE:
-                    print(f'[Correction Strategy]=> Shift Right')
+                    self.log(type='Correction Strategy', action='Shift Right')
                     self.driveRight(baseVelocity=self.AGENT_TO_WALL_SHIFT_CORRECTION_SPEED,
                                     turningStrength=self.AGENT_TO_WALL_SHIFT_CORRECTION_TURNING_STRENGTH)
                 if x > y:
-                    print(f'[Correction Strategy]=> Shift Right')
+                    self.log(type='Correction Strategy', action='Shift Right')
                     self.driveRight(baseVelocity=self.AGENT_TO_WALL_SHIFT_CORRECTION_SPEED,
                                     turningStrength=self.AGENT_TO_WALL_SHIFT_CORRECTION_TURNING_STRENGTH)
                 else:  # x > y
-                    print(f'[Correction Strategy]=> Shift Left')
+                    self.log(type='Correction Strategy', action='Shift Left')
                     self.driveLeft(baseVelocity=self.AGENT_TO_WALL_SHIFT_CORRECTION_SPEED,
                                    turningStrength=self.AGENT_TO_WALL_SHIFT_CORRECTION_TURNING_STRENGTH)
 
@@ -229,8 +247,8 @@ class ReflexAgent(Agent):
                     self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
                 # special case 1 / following the wall
                 self._state = 4
-                print(
-                    f'{self.REFLEX_AGENT_STATES[self._state]} [Special Case]')
+                self.log(type='State Change',
+                         action=self.REFLEX_AGENT_STATES[self._state])
                 return self._state
             elif (self._getSensorData(self._sensors['rightBackUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['rightFrontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_INF_THREASHOLD_DISTANCE and
@@ -239,68 +257,75 @@ class ReflexAgent(Agent):
                   self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_INF_THREASHOLD_DISTANCE):
                 # special case 2 / turning around wall corner
                 self._state = 5
-                print(
-                    f'{self.REFLEX_AGENT_STATES[self._state]} [Special Case]')
+                self.log(type='State Change',
+                         action=self.REFLEX_AGENT_STATES[self._state])
                 return self._state
             elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
                 # case 1 / nothing
                 self._state = 2
-                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                self.log(type='State Change',
+                         action=self.REFLEX_AGENT_STATES[self._state])
                 return self._state
             elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
                 # case 2 / front detection
                 self._state = 3
-                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                self.log(type='State Change',
+                         action=self.REFLEX_AGENT_STATES[self._state])
                 return self._state
             elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
                 # case 3 / front-right detection
                 self._state = 4
-                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                self.log(type='State Change',
+                         action=self.REFLEX_AGENT_STATES[self._state])
                 return self._state
             elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
                 # case 4 / front-left detection
                 self._state = 2
-                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                self.log(type='State Change',
+                         action=self.REFLEX_AGENT_STATES[self._state])
                 return self._state
             elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
                 # case 5 / front and front-right detection
                 self._state = 3
-                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                self.log(type='State Change',
+                         action=self.REFLEX_AGENT_STATES[self._state])
                 return self._state
             elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
                 # case 6 / front and front-left detection
                 self._state = 3
-                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                self.log(type='State Change',
+                         action=self.REFLEX_AGENT_STATES[self._state])
                 return self._state
             elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
                 # case 7 / front and front-left and front-right detection
                 self._state = 3
-                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                self.log(type='State Change',
+                         action=self.REFLEX_AGENT_STATES[self._state])
                 return self._state
             elif (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
                   self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] < self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
                 # case 8 / front-left and front-right detection
                 self._state = 2
-                print(f'{self.REFLEX_AGENT_STATES[self._state]}')
+                self.log(type='State Change',
+                         action=self.REFLEX_AGENT_STATES[self._state])
                 return self._state
             else:
-              print('Error: Unknown state')
-              pass
+                self.log(type='Error', action='Unhandled state')
 
         while target not in self.targetsCollected:
             readSensors()
