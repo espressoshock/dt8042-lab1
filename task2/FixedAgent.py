@@ -4,7 +4,6 @@
 
 # =IMPORTS
 from Agent import Agent
-import Card
 
 
 class FixedAgent(Agent):
@@ -17,7 +16,7 @@ class FixedAgent(Agent):
     #########################
     ### Override Bid
     #########################
-    def bid(self, hand: int):
+    def bid(self, hand: int, o_bid: int):
         bidded = self._hands[hand].bids
         if len(bidded) == 0:
             bid = 10

@@ -1,4 +1,3 @@
-
 ###########################
 ### ReflexAgentMemory Class
 ##########################
@@ -54,22 +53,61 @@ class ReflexAgentMemory(Agent):
     #########################
     ### Override Bid
     #########################
+    def bid(self, hand: int, o_bid: int):
+        # ===========
+        # == Utils ==
+        # ===========
+        def is_3_of_a_kind(hand):
+            return hand[0] == hand[1] == hand[2]
 
-    def bid(self, hand: int):
+        def is_one_pair(hand):
+            return (hand[0] == hand[1] or
+                    hand[0] == hand[2] or hand[1] == hand[2])
+
+        def default_strategy(cards: list):
+            #on specific ranks
+            if cards[0] == cards[1] == cards[2]:
+                bid = 50
+            elif cards[0] == cards[1] or cards[0] == cards[2] or cards[1] == cards[2]:
+                bid = 25
+            else:
+                bid = 10
+            return bid
+
+        # =====================
+        # == Deduce opponent ==
+        # =====================
+        bid = 0
         if(len(self._memory) > 0):
-            print('Decuded opponent is', self.deduce_opponent())
-        # ===================
-        # == Bidded amount ==
-        # ===================
-        bidded = self._hands[hand].bids
-        cards = self._hands[hand].cards
-        #on specific ranks
-        if cards[0] == cards[1] == cards[2]:
-            bid = 50
-        elif cards[0] == cards[1] or cards[0] == cards[2] or cards[1] == cards[2]:
-            bid = 25
-        else:
-            bid = 10
+            print('Deduced opponent is', self.deduce_opponent())
+            if self.deduce_opponent() == 0:
+                bid = default_strategy(self._hands[hand].cards)
+            elif self.deduce_opponent() == 1:
+                bid = default_strategy(self._hands[hand].cards)
+            elif self.deduce_opponent() == 2:
+                if o_bid == 50:  # 3 of a kind
+                    if is_3_of_a_kind(self.hands[hand].cards):
+                        bid = 25  # do further opt based on card values
+                    else:
+                        bid = 0
+                elif o_bid == 25:  # one pair
+                    if is_3_of_a_kind(self.hands[hand].cards):
+                        bid = 50
+                    if is_one_pair(self.hands[hand].cards):
+                        bid = 25  # do further opt based on card values
+                    else:
+                        bid = 0
+                elif o_bid == 10:  # high card
+                    if (is_3_of_a_kind(self.hands[hand].cards) or is_one_pair(self.hands[hand].cards)):
+                        bid = 50
+                    else:  # high card
+                        bid = 25  # check of highest rank
+        else:  # first round cannot deduce
+            bid = default_strategy(self._hands[hand].cards)
+
+        # =========
+        # == Bid ==
+        # =========
         self._hands[hand].add_bid(bid)
         return bid
 

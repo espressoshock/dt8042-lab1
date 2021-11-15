@@ -17,7 +17,7 @@ class RandomAgent(Agent):
     #########################
     ### Override Bid
     #########################
-    def bid(self, hand: int):
+    def bid(self, hand: int, o_bid: int):
         bid = random.randint(1, 50)  # integer for convinience
         self._hands[hand].add_bid(bid)
         return bid

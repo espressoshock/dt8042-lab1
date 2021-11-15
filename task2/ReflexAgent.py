@@ -15,7 +15,7 @@ class ReflexAgent(Agent):
     #########################
     ### Override Bid
     #########################
-    def bid(self, hand: int):
+    def bid(self, hand: int, o_bid: int):
         '''
         if set([Card('Q', 's'), Card('5', 's'), Card('4', 's')]).issubset(cards):
             return bid - 10

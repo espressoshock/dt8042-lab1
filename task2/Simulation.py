@@ -16,13 +16,17 @@ class Simulation:
     ### Constructor
     #########################
     def __init__(self, player1: Agent, player2: Agent, hand_count: int = 50, bid_count: int = 3):
-        self._player1 = player1
-        self._player2 = player2
+        self._player1 = player1 if not isinstance(
+            player1, ReflexAgentMemory) else player2
+        self._player2 = player2 if (isinstance(
+            player2, ReflexAgentMemory) and not isinstance(player1, ReflexAgentMemory)) else player1
+
         self._hand_count = hand_count
         self._bid_count = bid_count
         self._player1.set_hands_count(hand_count)
         self._player2.set_hands_count(hand_count)
         init()  # init colorama
+        print(self._player1.__class__, self._player2.__class__)
 
     #########################
     ### Start / Game Flow ###
@@ -46,8 +50,9 @@ class Simulation:
             # ======================
             pot = 0
             for _ in range(self._bid_count):
-                pot += self._player1.bid(hand)
-                pot += self._player2.bid(hand)
+                p1_bid = self._player1.bid(hand, 0)
+                p2_bid = self._player2.bid(hand, p1_bid)
+                pot += p1_bid + p2_bid
 
             # =======================
             # == Phase 3: Showdown ==

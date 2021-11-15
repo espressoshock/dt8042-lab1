@@ -36,7 +36,7 @@ class Agent:
     #########################
     ### Bid
     #########################
-    def bid(self):
+    def bid(self, hand: int, o_bid: int):
         pass
 
     #########################
