@@ -78,45 +78,82 @@ class Simulation:
                 self._player2.memorize(self._player1.hands[hand])
 
             # for visualization only
-            time.sleep(0.1)
-            hand_pool.set_description(f'Simulating Hand [{hand}]')
+            time.sleep(0.01)
+            hand_pool.set_description(f'Simulating Hand [{hand+1}]')
         print(
             f'\n{Back.YELLOW}{Fore.BLACK}  Simulation {Back.GREEN} Finished  {Style.RESET_ALL} \n')
 
     ####################
     ### Show results ###
     ####################
-    def show_results(self):
+    def show_results(self, slowdown: bool = False):
         print(f'Results: ')
-        print(f'{Back.CYAN} Player 1 Statistics: {Style.RESET_ALL}')
-        p1_totwinnings = p2_totwinnings = 0
-        for i, hand in enumerate(self._player1.hands):
-            print(f'{Back.WHITE}{Fore.BLACK}Hand N.{i}  {Style.RESET_ALL}')
-            print(f'\t {Fore.YELLOW}Cards: {Style.RESET_ALL}{hand.cards}')
-            print(f'\t {Fore.LIGHTRED_EX}Bids: {Style.RESET_ALL}{hand.bids}')
-            print(f'\t {Fore.GREEN}Winnings: {Style.RESET_ALL}', end='')
-            for winning in hand.winnings:
-                print(f'{winning}, ', end='')
-                p1_totwinnings += winning
-            print(f'\n-----------------------------------')
-        print(f'{Back.MAGENTA} Player 2 Statistics: {Style.RESET_ALL}')
-        for i, hand in enumerate(self._player2.hands):
-            print(f'{Back.WHITE}{Fore.BLACK}Hand N.{i}  {Style.RESET_ALL}')
-            print(f'\t {Fore.YELLOW}Cards: {Style.RESET_ALL}{hand.cards}')
-            print(f'\t {Fore.LIGHTRED_EX}Bids: {Style.RESET_ALL}{hand.bids}')
-            print(f'\t {Fore.GREEN}Winnings: {Style.RESET_ALL}', end='')
-            for winning in hand.winnings:
-                print(f'{winning}, ', end='')
-                p2_totwinnings += winning
-            print(f'\n-----------------------------------')
-        print(f'{Back.CYAN}Player 1 {Style.RESET_ALL} Total winnings: {p1_totwinnings}')
-        print(
-            f'{Back.MAGENTA} Player 2 {Style.RESET_ALL} Total winnings: {p2_totwinnings}')
-        print(
-            f'Difference: {abs(p1_totwinnings-p2_totwinnings)} in favors of {"Player 1" if p1_totwinnings > p2_totwinnings else "Player 2"}')
-        if isinstance(self._player2, ReflexAgentMemory):
+        if slowdown:
+            p1_totwinnings = p2_totwinnings = 0
+            # len -> player1.hands == player2.hands
+            for i in range(len(self._player1.hands)):
+                #player1
+                print(f'{Back.WHITE}{Fore.BLACK}Hand N.{i}  {Style.RESET_ALL}\n')
+                print(f'\t{Back.CYAN} Player 1: {Style.RESET_ALL}')
+                print(
+                    f'\t\t {Fore.YELLOW}Cards: {Style.RESET_ALL}{self._player1.hands[i].cards}')
+                print(
+                    f'\t\t {Fore.LIGHTRED_EX}Bids: {Style.RESET_ALL}{self._player1.hands[i].bids}')
+                print(
+                    f'\t\t {Fore.GREEN}Winnings: {Style.RESET_ALL} {self._player1.hands[i].winnings[0]}')
+                #player2
+                print(f'\t{Back.MAGENTA} Player 2: {Style.RESET_ALL}')
+                print(
+                    f'\t\t {Fore.YELLOW}Cards: {Style.RESET_ALL}{self._player2.hands[i].cards}')
+                print(
+                    f'\t\t {Fore.LIGHTRED_EX}Bids: {Style.RESET_ALL}{self._player2.hands[i].bids}')
+                print(
+                    f'\t\t {Fore.GREEN}Winnings: {Style.RESET_ALL} {self._player2.hands[i].winnings[0]}')
+                print(f'\n-----------------------------------\n')
+                p1_totwinnings += self._player1.hands[i].winnings[0]
+                p2_totwinnings += self._player2.hands[i].winnings[0]
+                time.sleep(0.1)
             print(
-                f'{Back.LIGHTYELLOW_EX}{Fore.BLACK}  Deduced opponent: {Back.GREEN}  {self._player2.AGENTS_[self._player2.deduce_opponent()]} Agent {Style.RESET_ALL}')
+                f'{Back.CYAN}Player 1 {Style.RESET_ALL} Total winnings: {p1_totwinnings}')
+            print(
+                f'{Back.MAGENTA} Player 2 {Style.RESET_ALL} Total winnings: {p2_totwinnings}')
+            print(
+                f'Difference: {abs(p1_totwinnings-p2_totwinnings)} in favors of {"Player 1" if p1_totwinnings > p2_totwinnings else "Player 2"}')
+            if isinstance(self._player2, ReflexAgentMemory):
+                print(
+                    f'{Back.LIGHTYELLOW_EX}{Fore.BLACK}  Deduced opponent: {Back.GREEN}  {self._player2.AGENTS_[self._player2.deduce_opponent()]} Agent {Style.RESET_ALL}')
+
+        else:
+            print(f'{Back.CYAN} Player 1 Statistics: {Style.RESET_ALL}')
+            p1_totwinnings = p2_totwinnings = 0
+            for i, hand in enumerate(self._player1.hands):
+                print(f'{Back.WHITE}{Fore.BLACK}Hand N.{i}  {Style.RESET_ALL}')
+                print(f'\t {Fore.YELLOW}Cards: {Style.RESET_ALL}{hand.cards}')
+                print(f'\t {Fore.LIGHTRED_EX}Bids: {Style.RESET_ALL}{hand.bids}')
+                print(f'\t {Fore.GREEN}Winnings: {Style.RESET_ALL}', end='')
+                for winning in hand.winnings:
+                    print(f'{winning}, ', end='')
+                    p1_totwinnings += winning
+                print(f'\n-----------------------------------')
+            print(f'{Back.MAGENTA} Player 2 Statistics: {Style.RESET_ALL}')
+            for i, hand in enumerate(self._player2.hands):
+                print(f'{Back.WHITE}{Fore.BLACK}Hand N.{i}  {Style.RESET_ALL}')
+                print(f'\t {Fore.YELLOW}Cards: {Style.RESET_ALL}{hand.cards}')
+                print(f'\t {Fore.LIGHTRED_EX}Bids: {Style.RESET_ALL}{hand.bids}')
+                print(f'\t {Fore.GREEN}Winnings: {Style.RESET_ALL}', end='')
+                for winning in hand.winnings:
+                    print(f'{winning}, ', end='')
+                    p2_totwinnings += winning
+                print(f'\n-----------------------------------')
+            print(
+                f'{Back.CYAN}Player 1 {Style.RESET_ALL} Total winnings: {p1_totwinnings}')
+            print(
+                f'{Back.MAGENTA} Player 2 {Style.RESET_ALL} Total winnings: {p2_totwinnings}')
+            print(
+                f'Difference: {abs(p1_totwinnings-p2_totwinnings)} in favors of {"Player 1" if p1_totwinnings > p2_totwinnings else "Player 2"}')
+            if isinstance(self._player2, ReflexAgentMemory):
+                print(
+                    f'{Back.LIGHTYELLOW_EX}{Fore.BLACK}  Deduced opponent: {Back.GREEN}  {self._player2.AGENTS_[self._player2.deduce_opponent()]} Agent {Style.RESET_ALL}')
 
     #########################
     ### Hand Comparison   ###
