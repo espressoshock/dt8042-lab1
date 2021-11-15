@@ -201,7 +201,8 @@ class Simulation():
         #dThread.start()
 
         # init agent strategy
-        print(f'\n\n{Back.WHITE}{Fore.BLACK} {Simulation.CONSOLE_SYM_PLAY} Simulation of a {type.capitalize()} Agent in progress...{Style.RESET_ALL}\n')
+        print(f'\n\n{Back.WHITE}{Fore.BLACK} {Simulation.CONSOLE_SYM_PLAY} Simulation in progress...{Style.RESET_ALL}')
+        print(f'{Back.CYAN}{Fore.BLACK}  Agent  {Back.YELLOW} {type.capitalize()}  {Style.RESET_ALL}\n')
         self._agent.act()
         print(f'\n\n{Back.WHITE}{Fore.BLACK} {Simulation.CONSOLE_SYM_STOP}  Simulation of a {type.capitalize()} Agent Terminated. {Style.RESET_ALL}\n')
 
