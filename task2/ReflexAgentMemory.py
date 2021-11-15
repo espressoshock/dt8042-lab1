@@ -5,6 +5,7 @@
 # =IMPORTS
 from Agent import Agent
 from Hand import Hand
+from Card import Card
 
 
 class ReflexAgentMemory(Agent):
@@ -73,14 +74,27 @@ class ReflexAgentMemory(Agent):
             return (hand[0] == hand[1] or
                     hand[0] == hand[2] or hand[1] == hand[2])
 
+        def value_strategy(hand, offset: int = 0):
+            s_hand = sorted(hand, reverse=True)
+            if Card('A', 's') in hand:
+                return 25 + offset
+            elif Card('K', 's') in hand:
+                return 20 + offset
+            elif Card('Q', 's') in hand:
+                return 15 + offset
+            elif Card('J', 's') in hand:
+                return 10 + offset
+            else:
+                return 5 + offset
+
         def default_strategy(cards: list):
             #on specific ranks
             if cards[0] == cards[1] == cards[2]:
                 bid = 50
             elif cards[0] == cards[1] or cards[0] == cards[2] or cards[1] == cards[2]:
-                bid = 25
+                bid = value_strategy(cards, 10)
             else:
-                bid = 10
+                bid = 5
             return bid
 
         # =====================
@@ -95,21 +109,21 @@ class ReflexAgentMemory(Agent):
             elif self.deduce_opponent() == 2:
                 if o_bid == 50:  # 3 of a kind
                     if is_3_of_a_kind(self.hands[hand].cards):
-                        bid = 25  # do further opt based on card values
+                        bid = value_strategy(self._hands[hand].cards)
                     else:
                         bid = 0
                 elif o_bid == 25:  # one pair
                     if is_3_of_a_kind(self.hands[hand].cards):
                         bid = 50
                     if is_one_pair(self.hands[hand].cards):
-                        bid = 25  # do further opt based on card values
+                        bid = value_strategy(self._hands[hand].cards)
                     else:
                         bid = 0
                 elif o_bid == 10:  # high card
                     if (is_3_of_a_kind(self.hands[hand].cards) or is_one_pair(self.hands[hand].cards)):
                         bid = 50
                     else:  # high card
-                        bid = 25  # check of highest rank
+                        bid = value_strategy(self._hands[hand].cards)
         else:  # first round cannot deduce
             bid = default_strategy(self._hands[hand].cards)
 
