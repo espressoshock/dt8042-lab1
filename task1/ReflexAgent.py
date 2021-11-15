@@ -144,7 +144,8 @@ class ReflexAgent(Agent):
                 self.driveForward(self.TRAVELLING_SPEED)
                 #check if you find a wall, then switch strategy
                 if self.isWallAhead():
-                    self.followWall(target)
+                    if self.followWall(target) == -1:
+                        return 0
         else:
             self.pointToTarget(target)
             while abs(self._getDirectionToTarget(target)[1][1]) > self.TARGET_DY_THRESHOLD:
@@ -156,7 +157,8 @@ class ReflexAgent(Agent):
                 self.driveForward(self.TRAVELLING_SPEED)
                 #check if you find a wall, then switch strategy
                 if self.isWallAhead():
-                    self.followWall(target)
+                    if self.followWall(target) == -1:
+                        return 0
         return 0  # next, no offset
 
     # =============================
@@ -164,7 +166,7 @@ class ReflexAgent(Agent):
     # =============================
     def pointToTarget(self, target):
         # target = self._selectClosestTarget(offset)
-
+        self.log(type='Strategy', action='Point to Target')
         # to->direction
         x, y, _ = self.direction
         # euler orientation angles
@@ -205,14 +207,17 @@ class ReflexAgent(Agent):
     def followWall(self, target):
 
         def findWallEdge():
+            return -1
             self.driveForward(self.FOLLOWING_WALL_SPEED)
 
         def rotateLeft():
             self.driveRotateUnclockwise(self.FAST_ROTATION_SPEED)
+            #self.driveBreak()
 
         def rotateRight():
-            self.driveRotateClockwise(self.FAST_ROTATION_SPEED)
-            #self.driveRight(baseVelocity=2,turningStrength=12)
+            #self.driveRotateClockwise(self.FAST_ROTATION_SPEED)
+            self.driveRight(baseVelocity=2, turningStrength=14)
+            self.driveBreak()
 
         def followWallEdge():
             self.driveForward(self.FOLLOWING_WALL_SPEED)
@@ -332,7 +337,8 @@ class ReflexAgent(Agent):
             if self.simulation.collectTargets(False, True) == target or target in self.targetsCollected:
                 return 0
             if self._state == 2:
-                findWallEdge()
+                if findWallEdge() == -1:
+                    return -1
             elif self._state == 3:
                 rotateLeft()
             elif self._state == 4:
