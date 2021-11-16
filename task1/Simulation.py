@@ -206,6 +206,9 @@ class Simulation():
         self._agent.act()
         print(f'\n\n{Back.WHITE}{Fore.BLACK} {Simulation.CONSOLE_SYM_STOP}  Simulation of a {type.capitalize()} Agent Terminated. {Style.RESET_ALL}\n')
 
+        # print collected targets
+        print(f'\n {Back.GREEN}{Fore.BLACK} 📦 Collected {Back.CYAN}  {len(self._agent.targetsCollected)}  {Style.RESET_ALL}')
+
     #########################
     ### Sim.Helpers
     #########################
