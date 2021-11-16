@@ -31,8 +31,8 @@ class RandomAgent(Agent):
             name, action = self._randomAction()
             piters.set_description(
                 f'{Back.BLUE} Action {Back.MAGENTA} {name}  {Style.RESET_ALL}')
-            self.simulation.collectTargets(False, False)
-            action(self.maxSpeed, self.msToTicks(strCSwitchPeriod))
+            self.simulation.collectTargets(False, True)
+            action(self.maxSpeed//2, self.msToTicks(strCSwitchPeriod))
 
     ## Get random action
     def _getRandomActionName(self):
