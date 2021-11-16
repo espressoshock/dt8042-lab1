@@ -19,7 +19,7 @@ class ReflexAgentMemory(Agent):
     DT_OFFSET = 30
     TARGET_DX_THRESHOLD = 0.1
     TARGET_DY_THRESHOLD = 0.1
-    TARGET_SWITCH_THREASHOLD_RANGE = 0.5
+    TARGET_SWITCH_THREASHOLD_RANGE = 0.6
     TRAVELLING_SPEED = 4
     FOLLOWING_WALL_SPEED = 4
     PRECISION_ROTATION_SPEED = 2
@@ -30,7 +30,7 @@ class ReflexAgentMemory(Agent):
     AGENT_TO_INF_THREASHOLD_DISTANCE = 0.4
     AGENT_TO_WALL_SHIFT_CORRECTION_DISTANCE = 0.5
     AGENT_TO_WALL_SHIFT_CORRECTION_SPEED = 3
-    AGENT_TO_WALL_SHIFT_CORRECTION_TURNING_STRENGTH = 6
+    AGENT_TO_WALL_SHIFT_CORRECTION_TURNING_STRENGTH = 7
 
     REFLEX_AGENT_STATES = {
         0: 'Idle',
@@ -40,6 +40,8 @@ class ReflexAgentMemory(Agent):
         4: 'Following wall edge',
         5: 'Rotate right'
     }
+
+    _visited = []
 
     #########################
     ### Constructor
@@ -58,7 +60,7 @@ class ReflexAgentMemory(Agent):
             print(f'{target[1]}: {target[2]}, dir: {target[3]}')
 
     def _selectClosestTarget(self, offset: int = 0):
-        targetPool = self.simulation.findTargets()
+        targetPool = self.simulation.findTargetsLeft()
         #print(f'closest target {targetPool[0][1], targetPool[0][0]}')
         #print('closestTargetOFfset: ', offset)
         return targetPool[offset][0]  # target handle
@@ -78,6 +80,10 @@ class ReflexAgentMemory(Agent):
     def clearLog(self):
         print('\x1b[2K\r', end='\r')
 
+    def updateVisitedList(self):
+        for target in self._visited:
+            if target in self.targetsCollected:
+                self._visited.remove(target)
     # ======================
     # == Main Entry Point ==
     # ======================
@@ -105,6 +111,7 @@ class ReflexAgentMemory(Agent):
     # =============================
 
     def _tryToMoveTowardsTarget(self, target):
+        self.updateVisitedList()
         tx = self._getDirectionToTarget(target)[1][0]
         ty = self._getDirectionToTarget(target)[1][1]
         self.log(type='Target selected', action='Trying to move towards...')
@@ -206,9 +213,11 @@ class ReflexAgentMemory(Agent):
     # == wall detection ==
     # ====================
     def isWallAhead(self):
-        if (self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
-            self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
-                self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE):
+        if (
+                (
+                    self._getSensorData(self._sensors['frontUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                    self._getSensorData(self._sensors['frontLeftUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE and
+                    self._getSensorData(self._sensors['frontRightUltrasonic'])['euclideanDistance'] > self.AGENT_TO_WALL_THREASHOLD_DISTANCE)):
             return False
         else:
             return True
@@ -237,6 +246,23 @@ class ReflexAgentMemory(Agent):
             #self.driveRotateClockwise(self.FAST_ROTATION_SPEED)
             self.driveRight(baseVelocity=3, turningStrength=18)
             self.driveBreak()
+
+        def followWallEdge():
+            self.driveForward(self.FOLLOWING_WALL_SPEED)
+
+        def switchTarget():
+            ct = self._selectClosestTarget()
+            tx = self._getDirectionToTarget(ct)[1][0]
+            ty = self._getDirectionToTarget(ct)[1][1]
+
+            if math.sqrt(tx**2 + ty**2) < self.TARGET_SWITCH_THREASHOLD_RANGE:
+                self.log(action='Target Change', type='Strategy')
+                self._visited.append(target)
+                return 1
+            return 0
+
+        def alreadyVisited():
+            return target in self._visited
 
         def followWallEdge():
             self.driveForward(self.FOLLOWING_WALL_SPEED)
@@ -352,19 +378,12 @@ class ReflexAgentMemory(Agent):
                 self.log(type='Error', action='Unhandled state')
 
         while target not in self.targetsCollected:
+            if not alreadyVisited() and switchTarget() == 1:
+                return -1
             readSensors()
-            ct = self._selectClosestTarget()
-            tx = self._getDirectionToTarget(ct)[1][0]
-            ty = self._getDirectionToTarget(ct)[1][1]
-
-            distance = math.sqrt(tx**2 + ty**2)
-            self.log(action=str(distance), type='Distance')
-
-            if distance < self.TARGET_SWITCH_THREASHOLD_RANGE:
-                return 0
-
-            if self.simulation.collectTargets(False, True) == target or target in self.targetsCollected:
-                return 1
+            self.simulation.collectTargets(False, True)
+            #if self.simulation.collectTargets(False, True) == target or target in self.targetsCollected:
+            #    return 1
             if self._state == 2:
                 return -1
                 findWallEdge()
