@@ -237,6 +237,26 @@ class Simulation():
             res.append((handle, name, distance, direction))
         res.sort(key=lambda xx: xx[2])
         return res
+    
+    ## Find leftover targets (energy blocks)
+    def findTargetsLeft(self):
+        res = []
+        retCode, agentPosition = vrep.simxGetObjectPosition(
+            self._client, self._agent._agentHandle, -1, vrepConst.simx_opmode_oneshot_wait)
+        for handle, name, position in self._env.targets:
+            relativePos = [position[0] - agentPosition[0],
+                           position[1] - agentPosition[1]]
+            # compute Euclidean distance (in 2-D)
+            distance = math.sqrt(relativePos[0]**2 + relativePos[1]**2)
+            absDirection = math.atan2(relativePos[0], relativePos[1])
+            direction = (position[2] / (2*math.pi))*360
+            #direction = self.normalizeAngle(absDirection - self._agent.orientation)
+            if self._env.targets[name][2][2] != -2:
+                res.append((handle, name, distance, direction))
+        res.sort(key=lambda xx: xx[2])
+        return res
+
+
 
     ## collects targets in TARGET_COLLECTION_RANGE
     def collectTargets(self, missLog: bool = True, hitLog: bool = True):
