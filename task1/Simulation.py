@@ -5,6 +5,7 @@ from FixedAgent import FixedAgent
 from MemoryAgent import MemoryAgent
 from RandomAgent import RandomAgent
 from ReflexAgent import ReflexAgent
+from ReflexAgentMemory import ReflexAgentMemory
 from libs import vrep
 from libs import vrepConst
 from Agent import Agent
@@ -135,8 +136,12 @@ class Simulation():
                 ret_sl,  ultraSonicSensorRightBack = vrep.simxGetObjectHandle(
                     client, 'Pioneer_p3dx_ultrasonicSensor9', vrepConst.simx_opmode_oneshot_wait)
                 ####### Back ############
-                ret_sl,  ultraSonicSensorBack = vrep.simxGetObjectHandle(
+                ret_sl,  ultraSonicSensorBack= vrep.simxGetObjectHandle(
                     client, 'Pioneer_p3dx_ultrasonicSensor13', vrepConst.simx_opmode_oneshot_wait)
+                ret_sl,  ultraSonicSensorBackLeft = vrep.simxGetObjectHandle(
+                    client, 'Pioneer_p3dx_ultrasonicSensor15', vrepConst.simx_opmode_oneshot_wait)
+                ret_sl,  ultraSonicSensorBackRight = vrep.simxGetObjectHandle(
+                    client, 'Pioneer_p3dx_ultrasonicSensor10', vrepConst.simx_opmode_oneshot_wait)
                 blockHandleArray = []
                 for i_block in range(12):
                     blockName = 'ConcretBlock#'+str(i_block)
@@ -165,6 +170,8 @@ class Simulation():
                            'frontLeftUltrasonic': ultraSonicSensorFrontLeft,
                            'frontRightUltrasonic': ultraSonicSensorFrontRight,
                            'backUltrasonic': ultraSonicSensorBack,
+                           'backLeftUltrasonic': ultraSonicSensorBackLeft,
+                           'backRightUltrasonic': ultraSonicSensorBackRight,
                            'rightFrontUltrasonic': ultraSonicSensorRightFront,
                            'rightBackUltrasonic': ultraSonicSensorRightBack,
                            'targetSensor': pioneerRobotHandle}
@@ -188,6 +195,8 @@ class Simulation():
             self._agent.__class__ = FixedAgent
         elif type == 'reflex':
             self._agent.__class__ = ReflexAgent
+        elif type == 'reflex-memory':
+            self._agent.__class__ = ReflexAgentMemory
         else:  # agent with memory => 'memory'
             self._agent.__class__ = MemoryAgent
 
