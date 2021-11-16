@@ -136,12 +136,20 @@ class Simulation():
                 ret_sl,  ultraSonicSensorRightBack = vrep.simxGetObjectHandle(
                     client, 'Pioneer_p3dx_ultrasonicSensor9', vrepConst.simx_opmode_oneshot_wait)
                 ####### Back ############
-                ret_sl,  ultraSonicSensorBack= vrep.simxGetObjectHandle(
+                ret_sl,  ultraSonicSensorBack = vrep.simxGetObjectHandle(
                     client, 'Pioneer_p3dx_ultrasonicSensor13', vrepConst.simx_opmode_oneshot_wait)
                 ret_sl,  ultraSonicSensorBackLeft = vrep.simxGetObjectHandle(
                     client, 'Pioneer_p3dx_ultrasonicSensor15', vrepConst.simx_opmode_oneshot_wait)
                 ret_sl,  ultraSonicSensorBackRight = vrep.simxGetObjectHandle(
                     client, 'Pioneer_p3dx_ultrasonicSensor10', vrepConst.simx_opmode_oneshot_wait)
+                ####### Guard (Aux) ############ named in clockwise order
+                ####### Only used to provide extra wall detection #####
+                ret_sl,  ultraSonicSensorGuardFront1 = vrep.simxGetObjectHandle(
+                    client, 'Pioneer_p3dx_ultrasonicSensor2', vrepConst.simx_opmode_oneshot_wait)
+                ret_sl,  ultraSonicSensorGuardFront2 = vrep.simxGetObjectHandle(
+                    client, 'Pioneer_p3dx_ultrasonicSensor5', vrepConst.simx_opmode_oneshot_wait)
+                ret_sl,  ultraSonicSensorGuardFront3 = vrep.simxGetObjectHandle(
+                    client, 'Pioneer_p3dx_ultrasonicSensor7', vrepConst.simx_opmode_oneshot_wait)
                 blockHandleArray = []
                 for i_block in range(12):
                     blockName = 'ConcretBlock#'+str(i_block)
@@ -174,7 +182,12 @@ class Simulation():
                            'backRightUltrasonic': ultraSonicSensorBackRight,
                            'rightFrontUltrasonic': ultraSonicSensorRightFront,
                            'rightBackUltrasonic': ultraSonicSensorRightBack,
-                           'targetSensor': pioneerRobotHandle}
+                           'targetSensor': pioneerRobotHandle,
+                           'frontGuard1Ultrasonic': ultraSonicSensorGuardFront1,
+                           'frontGuard2Ultrasonic': ultraSonicSensorGuardFront2,
+                           'frontGuard3Ultrasonic': ultraSonicSensorGuardFront3,
+                           }
+
                 return cls(Agent(None, actuators, sensors, pioneerRobotHandle, client, simulationDt, Simulation.TOP_SPEED, synchronous), Environment(blockHandleArray), connectionTime, client)
             else:  # API error
                 print(f'Error: Remote API error [{res}]')
@@ -202,6 +215,7 @@ class Simulation():
 
         # set simulation
         self._agent.simulation = self
+        
 
         ## start auto-collect daemon for target fetching
         #Asynchronous: separate thread approach
@@ -210,8 +224,10 @@ class Simulation():
         #dThread.start()
 
         # init agent strategy
-        print(f'\n\n{Back.WHITE}{Fore.BLACK} {Simulation.CONSOLE_SYM_PLAY} Simulation in progress...{Style.RESET_ALL}')
-        print(f'{Back.CYAN}{Fore.BLACK}  Agent  {Back.YELLOW} {type.capitalize()}  {Style.RESET_ALL}\n')
+        print(
+            f'\n\n{Back.WHITE}{Fore.BLACK} {Simulation.CONSOLE_SYM_PLAY} Simulation in progress...{Style.RESET_ALL}')
+        print(
+            f'{Back.CYAN}{Fore.BLACK}  Agent  {Back.YELLOW} {type.capitalize()}  {Style.RESET_ALL}\n')
         self._agent.act()
         print(f'\n\n{Back.WHITE}{Fore.BLACK} {Simulation.CONSOLE_SYM_STOP}  Simulation of a {type.capitalize()} Agent Terminated. {Style.RESET_ALL}\n')
 
@@ -237,7 +253,7 @@ class Simulation():
             res.append((handle, name, distance, direction))
         res.sort(key=lambda xx: xx[2])
         return res
-    
+
     ## Find leftover targets (energy blocks)
     def findTargetsLeft(self):
         res = []
@@ -256,9 +272,8 @@ class Simulation():
         res.sort(key=lambda xx: xx[2])
         return res
 
-
-
     ## collects targets in TARGET_COLLECTION_RANGE
+
     def collectTargets(self, missLog: bool = True, hitLog: bool = True):
         handle, name, distance, direction = self.findTargets()[0]
         if distance <= self.TARGET_COLLECTION_RANGE + 0.0:
