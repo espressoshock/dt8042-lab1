@@ -19,18 +19,18 @@ class ReflexAgentMemory(Agent):
     DT_OFFSET = 30
     TARGET_DX_THRESHOLD = 0.1
     TARGET_DY_THRESHOLD = 0.1
-    TARGET_SWITCH_THREASHOLD_RANGE = 1
+    TARGET_SWITCH_THREASHOLD_RANGE = 0.5
     TRAVELLING_SPEED = 4
     FOLLOWING_WALL_SPEED = 4
     PRECISION_ROTATION_SPEED = 2
     FAST_ROTATION_SPEED = 4
     POINT_TO_ALLOWED_VARIATION = 0.1
     SIM_OFFSET_RAD = 0.2
-    AGENT_TO_WALL_THREASHOLD_DISTANCE = 0.5
-    AGENT_TO_INF_THREASHOLD_DISTANCE = 0.5
-    AGENT_TO_WALL_SHIFT_CORRECTION_DISTANCE = 0.6
-    AGENT_TO_WALL_SHIFT_CORRECTION_SPEED = 4
-    AGENT_TO_WALL_SHIFT_CORRECTION_TURNING_STRENGTH = 3.5
+    AGENT_TO_WALL_THREASHOLD_DISTANCE = 0.4
+    AGENT_TO_INF_THREASHOLD_DISTANCE = 0.4
+    AGENT_TO_WALL_SHIFT_CORRECTION_DISTANCE = 0.5
+    AGENT_TO_WALL_SHIFT_CORRECTION_SPEED = 3
+    AGENT_TO_WALL_SHIFT_CORRECTION_TURNING_STRENGTH = 6
 
     REFLEX_AGENT_STATES = {
         0: 'Idle',
@@ -84,7 +84,8 @@ class ReflexAgentMemory(Agent):
 
     def _act(self):
         offset = 0  # start from first
-        while len(self.targetsCollected) < len(self.simulation._env.targets)-1:  # just for convinience => no memory here :)
+        # just for convinience => no memory here :)
+        while len(self.targetsCollected) < len(self.simulation._env.targets)-1:
             ####################
             #    Perception    #
             ####################
@@ -97,8 +98,6 @@ class ReflexAgentMemory(Agent):
             #  Towards target  #
             ####################
             offset = self._tryToMoveTowardsTarget(ct)
-        self.log(type='total collected targets: ',
-                 action=self.targetsCollected)
         time.sleep(2)
 
     # =============================
@@ -121,7 +120,11 @@ class ReflexAgentMemory(Agent):
                 self.driveForward(self.TRAVELLING_SPEED)
                 #check if you find a wall, then switch strategy
                 if self.isWallAhead():
-                    self.followWall(target)
+                    if self.followWall(target) == 0:
+                        return 0
+                    if self.followWall(target) == -1:
+                        return 0
+
         else:  # you can simplify this
             while abs(self._getDirectionToTarget(target)[1][0]) > self.TARGET_DX_THRESHOLD:
                 #print(f'[Strategy]=> Moving backward')
@@ -134,7 +137,10 @@ class ReflexAgentMemory(Agent):
                 if self.isWallBehind():
                     break
                 if self.isWallAhead():
-                    self.followWall(target)
+                    if self.followWall(target) == 0:
+                        return 0
+                    if self.followWall(target) == -1:
+                        return 0
         if ty >= 0:
             self.pointToTarget(target)
             while abs(self._getDirectionToTarget(target)[1][1]) > self.TARGET_DY_THRESHOLD:
@@ -146,6 +152,8 @@ class ReflexAgentMemory(Agent):
                 self.driveForward(self.TRAVELLING_SPEED)
                 #check if you find a wall, then switch strategy
                 if self.isWallAhead():
+                    if self.followWall(target) == 0:
+                        return 0
                     if self.followWall(target) == -1:
                         return 0
         else:
@@ -159,6 +167,8 @@ class ReflexAgentMemory(Agent):
                 self.driveForward(self.TRAVELLING_SPEED)
                 #check if you find a wall, then switch strategy
                 if self.isWallAhead():
+                    if self.followWall(target) == 0:
+                        return 0
                     if self.followWall(target) == -1:
                         return 0
         return 0  # next, no offset
@@ -225,7 +235,7 @@ class ReflexAgentMemory(Agent):
 
         def rotateRight():
             #self.driveRotateClockwise(self.FAST_ROTATION_SPEED)
-            self.driveRight(baseVelocity=2, turningStrength=14)
+            self.driveRight(baseVelocity=3, turningStrength=18)
             self.driveBreak()
 
         def followWallEdge():
@@ -343,9 +353,20 @@ class ReflexAgentMemory(Agent):
 
         while target not in self.targetsCollected:
             readSensors()
-            if self.simulation.collectTargets(False, True) == target or target in self.targetsCollected:
+            ct = self._selectClosestTarget()
+            tx = self._getDirectionToTarget(ct)[1][0]
+            ty = self._getDirectionToTarget(ct)[1][1]
+
+            distance = math.sqrt(tx**2 + ty**2)
+            self.log(action=str(distance), type='Distance')
+
+            if distance < self.TARGET_SWITCH_THREASHOLD_RANGE:
                 return 0
+
+            if self.simulation.collectTargets(False, True) == target or target in self.targetsCollected:
+                return 1
             if self._state == 2:
+                return -1
                 findWallEdge()
             elif self._state == 3:
                 rotateLeft()
