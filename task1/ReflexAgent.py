@@ -58,7 +58,7 @@ class ReflexAgent(Agent):
             print(f'{target[1]}: {target[2]}, dir: {target[3]}')
 
     def _selectClosestTarget(self, offset: int = 0):
-        targetPool = self.simulation.findTargets()
+        targetPool = self.simulation.findTargetsLeft()
         #print(f'closest target {targetPool[0][1], targetPool[0][0]}')
         #print('closestTargetOFfset: ', offset)
         return targetPool[offset][0]  # target handle
@@ -81,10 +81,10 @@ class ReflexAgent(Agent):
     # ======================
     # == Main Entry Point ==
     # ======================
-
     def _act(self):
         offset = 0  # start from first
-        while len(self.targetsCollected) < 10:  # just for convinience => no memory here :)
+        # just for convinience => no memory here :)
+        while len(self.simulation.findTargetsLeft()) > 0:
             ####################
             #    Perception    #
             ####################
@@ -97,8 +97,6 @@ class ReflexAgent(Agent):
             #  Towards target  #
             ####################
             offset = self._tryToMoveTowardsTarget(ct)
-        self.log(type='total collected targets: ',
-                 action=self.targetsCollected)
         time.sleep(2)
 
     # =============================
