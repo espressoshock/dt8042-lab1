@@ -5,6 +5,8 @@
 # =IMPORTS
 from Agent import Agent
 import random
+from tqdm import tqdm
+from colorama import Fore, Back, Style, init
 
 
 class RandomAgent(Agent):
@@ -13,24 +15,31 @@ class RandomAgent(Agent):
     #########################
     def __init__(self):
         super().__init__()
+        init()
 
     #########################
     ### Override
     #########################
     def act(self):
         ######## PARAMS #######
-        strCSwitchPeriod = 2  # time period per strategy before switching
-        simIters = 5  # sim. iterations
+        strCSwitchPeriod = 3  # time period per strategy before switching
+        simIters = 15  # sim. iterations
         ######## PARAMS #######
 
-        for i in range(simIters):
-            self._randomAction()(self.maxSpeed, self.msToTicks(strCSwitchPeriod))
+        piters = tqdm(range(simIters))
+        for i in piters:
+            name, action = self._randomAction()
+            piters.set_description(
+                f'{Back.BLUE} Action {Back.MAGENTA} {name}  {Style.RESET_ALL}')
+            self.simulation.collectTargets(False, False)
+            action(self.maxSpeed, self.msToTicks(strCSwitchPeriod))
 
     ## Get random action
     def _getRandomActionName(self):
         allowedActions = ['forward', 'backward',
-                          'left', 'right', 'break']
-        return (random.choice(allowedActions)).capitalize()
+                          'left', 'right', 'rotateUnclockwise', 'rotateClockwise', 'break']
+        rAction = random.choice(allowedActions)
+        return rAction[0].capitalize() + rAction[1:]
 
     ## execute random drive action / no args
     def _execRandomAction(self):
@@ -41,5 +50,5 @@ class RandomAgent(Agent):
     ## get random drive action method
     def _randomAction(self):
         rAction = self._getRandomActionName()
-        print(f'- Executing random action => [{rAction}]')
-        return getattr(super(), 'drive'+rAction)
+        #print(f'- Executing random action => [{rAction}]')
+        return (rAction, getattr(super(), 'drive'+rAction))
