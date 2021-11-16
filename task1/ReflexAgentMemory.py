@@ -26,8 +26,8 @@ class ReflexAgentMemory(Agent):
     FAST_ROTATION_SPEED = 4
     POINT_TO_ALLOWED_VARIATION = 0.1
     SIM_OFFSET_RAD = 0.2
-    AGENT_TO_WALL_THREASHOLD_DISTANCE = 0.4
-    AGENT_TO_INF_THREASHOLD_DISTANCE = 0.4
+    AGENT_TO_WALL_THREASHOLD_DISTANCE = 0.5
+    AGENT_TO_INF_THREASHOLD_DISTANCE = 0.5
     AGENT_TO_WALL_SHIFT_CORRECTION_DISTANCE = 0.6
     AGENT_TO_WALL_SHIFT_CORRECTION_SPEED = 4
     AGENT_TO_WALL_SHIFT_CORRECTION_TURNING_STRENGTH = 3.5
@@ -84,7 +84,7 @@ class ReflexAgentMemory(Agent):
 
     def _act(self):
         offset = 0  # start from first
-        while len(self.targetsCollected) < 10:  # just for convinience => no memory here :)
+        while len(self.targetsCollected) < len(self.simulation._env.targets)-1:  # just for convinience => no memory here :)
             ####################
             #    Perception    #
             ####################
