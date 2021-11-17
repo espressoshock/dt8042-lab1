@@ -19,7 +19,7 @@ class ReflexAgentMemory(Agent):
     DT_OFFSET = 30
     TARGET_DX_THRESHOLD = 0.1
     TARGET_DY_THRESHOLD = 0.1
-    TARGET_SWITCH_THREASHOLD_RANGE = 2
+    TARGET_SWITCH_THREASHOLD_RANGE = 0.5
     TRAVELLING_SPEED = 4
     FOLLOWING_WALL_SPEED = 4
     PRECISION_ROTATION_SPEED = 2
@@ -94,7 +94,7 @@ class ReflexAgentMemory(Agent):
 
     def _act(self):
         offset = 0  # start from first
-        while len(self.targetsCollected) < len(self.simulation._env.targets)-1:
+        while len(self.targetsCollected) < len(self.simulation._env.targets):
             ####################
             #    Perception    #
             ####################
@@ -236,8 +236,7 @@ class ReflexAgentMemory(Agent):
     # == (3) Wall folowing ==
     # =======================
     def followWall(self, target):
-        self.MEMORY.append(target)
-
+        #self.MEMORY.append(target)
 
         def findWallEdge():
             #self.driveForward(self.FOLLOWING_WALL_SPEED)
@@ -259,24 +258,24 @@ class ReflexAgentMemory(Agent):
 
         def switchTarget():
             # new closest target
-            ct = self._selectClosestTarget()
-            ntx = self._getDirectionToTarget(ct)[1][0]
-            nty = self._getDirectionToTarget(ct)[1][1]
+            nct = self.simulation.findTargets()[0]
+            #ntx = self._getDirectionToTarget(nct)[1][0]
+            #nty = self._getDirectionToTarget(nct)[1][1]
             # current hold target
             ctx = self._getDirectionToTarget(target)[1][0]
             cty = self._getDirectionToTarget(target)[1][1]
 
-            ntDistance = math.sqrt(ntx**2 + nty**2)
-            ctDistance = math.sqrt(ctx**2 + cty**2)
+           # ntDistance = math.sqrt(ntx**2 + nty**2)
+           # ctDistance = math.sqrt(ctx**2 + cty**2)
 
-            print('dist: ', ntDistance, ctDistance)
-            print('memory', self.MEMORY)
-            print('ctarget: ', target, ct)
+            #print('dist: ', nct[2])
+            #print('memory', self.MEMORY)
+            #print('ctarget: ', target, nct)
 
-            if ((ct != target) and (ntDistance < ctDistance) and (ntDistance < self.TARGET_SWITCH_THREASHOLD_RANGE)
-            ):
+            if ((nct[0] != target) and (nct[2] < self.TARGET_SWITCH_THREASHOLD_RANGE)
+                ):
                 self.log(action='Target Change', type='Strategy')
-                return ct
+                return nct
             return -1
 
         def alreadyVisited(_target):
