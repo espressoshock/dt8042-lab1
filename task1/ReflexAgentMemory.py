@@ -96,14 +96,14 @@ class ReflexAgentMemory(Agent):
     def forget(self, target):
         self.log(type='Memory', action='Target removed from memory')
         return self.MEMORY.remove(target)
-    
+
     def memorize(self, target):
         if target not in self.MEMORY:
             self.log(type='Memory', action='Target added to memory')
             self.MEMORY.append(target)
             return 1
         return -1
-    
+
     def clearMemory(self):
         self.log(type='Memory', action='Cleared')
         self.MEMORY.clear()
@@ -254,10 +254,10 @@ class ReflexAgentMemory(Agent):
     # == (3) Wall folowing ==
     # =======================
     def followWall(self, target):
-        #self.MEMORY.append(target)
+        _rotationTicks = 0
 
         def findWallEdge():
-            #self.driveForward(self.FOLLOWING_WALL_SPEED)
+            self.driveForward(self.FOLLOWING_WALL_SPEED)
             self.driveRight(baseVelocity=2, turningStrength=12)
             #self.driveBreak()
 
@@ -266,10 +266,10 @@ class ReflexAgentMemory(Agent):
             #self.driveBreak()
 
         def rotateRight():
-            self.driveRight(baseVelocity=2, turningStrength=15)
-            self.driveBreak()
+            self.driveRight(baseVelocity=2, turningStrength=17)
+            #self.driveBreak()
             self.driveRotateClockwise(self.PRECISION_ROTATION_SPEED)
-            self.driveBreak()
+            #self.driveBreak()
 
         def followWallEdge():
             self.driveForward(self.FOLLOWING_WALL_SPEED)
@@ -291,7 +291,7 @@ class ReflexAgentMemory(Agent):
             #print('ctarget: ', target, nct)
 
             if ((nct[0] != target) and (nct[2] < self.TARGET_SWITCH_THREASHOLD_RANGE)
-                ):
+                    ):
                 self.log(action='Target Change', type='Strategy')
                 self.memorize(target)
                 return nct
@@ -414,16 +414,13 @@ class ReflexAgentMemory(Agent):
             else:
                 self.log(type='Error', action='Unhandled state')
 
-        start = time.perf_counter()
         while target not in self.targetsCollected:
-
-            #if not alreadyVisited() and switchTarget() == 1:
-            #    return 1
             readSensors()
             self.simulation.collectTargets(False, True)
             if self._state == 2:
-                if time.perf_counter() > start + 2:
+                if _rotationTicks > 10:
                     return 0
+                _rotationTicks += 1
                 findWallEdge()
             elif self._state == 3:
                 rotateLeft()
