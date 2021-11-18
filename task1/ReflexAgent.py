@@ -226,6 +226,7 @@ class ReflexAgent(Agent):
     # == (3) Wall folowing ==
     # =======================
     def followWall(self, target):
+        _recomputationTicks = 0
         _rotationTicks = 0
 
         def findWallEdge():
@@ -380,6 +381,9 @@ class ReflexAgent(Agent):
             elif self._state == 3:
                 rotateLeft()
             elif self._state == 4:
+                if _recomputationTicks > 100:
+                    return 0
+                _recomputationTicks += 1
                 followWallEdge()
             elif self._state == 5:
                 rotateRight()
