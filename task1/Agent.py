@@ -30,7 +30,7 @@ class Agent():
     #########################
     def act(self):
         pass
-
+    
     #########################
     ### Steering Methods
     #########################
@@ -114,7 +114,7 @@ class Agent():
             pass
         self.driveBreak()
 
-        #########################
+    #########################
     ### Utils
     #########################
     # Only for sync-mode
@@ -215,6 +215,7 @@ class Agent():
     #add collected targets
     def targetCollected(self, target):
         self._targetsCollected.append(target)
+        pass
 
     # get directon
     def _getDirection(self):

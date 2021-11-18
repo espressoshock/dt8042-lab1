@@ -54,6 +54,13 @@ class ReflexAgentMemory(Agent):
         self._cTarget = None  # current (selected) target |deprecated|
         self._state = 0
 
+    #########################
+    ### Override
+    #########################
+    def targetCollected(self, target):
+        self.clearMemory()
+        return super().targetCollected(target)
+
     # =======================
     # == Utils / Movements ==
     # =======================
@@ -75,7 +82,7 @@ class ReflexAgentMemory(Agent):
         return relPos
 
     def log(self, action: str, type: str = 'Action'):
-        if len(action) < 15:
+        if len(action) < 30:
             self.clearLog()
         print(
             f'{Back.BLUE} {type}  {Back.MAGENTA} {action}  {Style.RESET_ALL}', end='\r')
@@ -83,10 +90,23 @@ class ReflexAgentMemory(Agent):
     def clearLog(self):
         print('\x1b[2K\r', end='\r')
 
-    def updateVisitedList(self):
-        for target in self.MEMORY:
-            if target in self.targetsCollected:
-                self.MEMORY.remove(target)
+    # ================
+    # == MEMORY FNs ==
+    # ================
+    def forget(self, target):
+        self.log(type='Memory', action='Target removed from memory')
+        return self.MEMORY.remove(target)
+    
+    def memorize(self, target):
+        if target not in self.MEMORY:
+            self.log(type='Memory', action='Target added to memory')
+            self.MEMORY.append(target)
+            return 1
+        return -1
+    
+    def clearMemory(self):
+        self.log(type='Memory', action='Cleared')
+        self.MEMORY.clear()
 
     # ======================
     # == Main Entry Point ==
@@ -112,12 +132,10 @@ class ReflexAgentMemory(Agent):
     # =============================
     # == (2) Move towards target ==
     # =============================
-
     def _tryToMoveTowardsTarget(self, target):
-        self.updateVisitedList()
-        #if target in self.MEMORY:
-        #    self.log(type='Memory', action='Target already seen')
-        #    return 1
+        if target in self.MEMORY:
+            self.log(type='Memory', action='Target already seen')
+            return 1
         tx = self._getDirectionToTarget(target)[1][0]
         ty = self._getDirectionToTarget(target)[1][1]
         self.log(type='Target selected', action='Trying to move towards...')
@@ -275,6 +293,7 @@ class ReflexAgentMemory(Agent):
             if ((nct[0] != target) and (nct[2] < self.TARGET_SWITCH_THREASHOLD_RANGE)
                 ):
                 self.log(action='Target Change', type='Strategy')
+                self.memorize(target)
                 return nct
             return -1
 
