@@ -381,7 +381,7 @@ class ReflexAgent(Agent):
             elif self._state == 3:
                 rotateLeft()
             elif self._state == 4:
-                if _recomputationTicks > 100:
+                if _recomputationTicks > 50:
                     return 0
                 _recomputationTicks += 1
                 followWallEdge()
